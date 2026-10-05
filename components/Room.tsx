@@ -14,7 +14,20 @@ import {
 import { MediaDeviceFailure, RoomEvent, Track } from "livekit-client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PhoneOff, LogOut, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import {
+  Captions,
+  LogOut,
+  Mic,
+  MicOff,
+  MonitorUp,
+  MoreHorizontal,
+  PhoneOff,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
@@ -410,118 +423,83 @@ function InCall({
   };
 
   return (
-    <div className="grid min-h-[calc(100vh-73px)] grid-rows-[auto_1fr_auto] gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr_auto]">
-      <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100 flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            Assistant is active — AI-generated notes
-          </p>
-          <span className="text-xs text-slate-400">Room {code}</span>
+    <div className="flex min-h-[calc(100dvh-73px)] flex-col bg-[#111827] text-slate-100">
+      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-slate-700/80 bg-[#1f2937] px-4 py-2.5 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#6264a7] text-white shadow-lg shadow-indigo-950/30">
+            <Video className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{code}</p>
+            <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="h-3 w-3 text-emerald-400" /> MeetMate meeting</p>
+          </div>
         </div>
-
-        {/* Host-only "End meeting" button in top toolbar */}
-        {isHost && (
-          <button
-            type="button"
-            disabled={ending}
-            onClick={() => void endMeeting()}
-            className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 hover:border-red-500/60 disabled:opacity-50"
-          >
-            <PhoneOff className="h-4 w-4 text-red-400" />
-            <span>{ending ? "Ending meeting…" : "End meeting"}</span>
-          </button>
-        )}
+        <div className="hidden items-center gap-2 sm:flex">
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
+          <button type="button" aria-label="More meeting options" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+        </div>
       </div>
 
-      <section className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-[#080d18]">
-        <div className="flex-1 p-2">
-          {!isMockLiveKit && tracks.length > 0 ? (
-            <GridLayout tracks={tracks} className="h-full">
-              <ParticipantTile />
-            </GridLayout>
-          ) : (
-            <LocalCameraStage
-              displayName={displayName}
-              cameraOn={localCamOn}
-              micOn={localMicOn}
-              streamRef={localStreamRef}
-            />
-          )}
-        </div>
-        <div aria-label="Meeting participants" className="flex flex-wrap items-center gap-3 border-t border-slate-700 px-3 py-2">
-          <AssistantTile />
-        </div>
-        <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
-          {isMockLiveKit ? (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setLocalMicOn((m) => !m)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
-                }`}
-              >
-                {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}
-                <span>{localMicOn ? "Mute Mic" : "Unmute Mic"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocalCamOn((c) => !c)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
-                }`}
-              >
-                {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}
-                <span>{localCamOn ? "Stop Video" : "Start Video"}</span>
-              </button>
-            </div>
-          ) : (
-            <ControlBar
-              variation="verbose"
-              controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
-              onDeviceError={({ source, error }) => onNotice({
-                kind: "error",
-                message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
-              })}
-            />
-          )}
-          {/* Host has End meeting in control bar; non-host has Leave */}
-          {isHost ? (
-            <button
-              type="button"
-              disabled={ending}
-              onClick={() => void endMeeting()}
-              className="ml-2 flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
-            >
-              <PhoneOff className="h-4 w-4" />
-              <span>{ending ? "Ending…" : "End meeting"}</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => void handleLeave()}
-              className="ml-2 flex items-center gap-1.5 rounded-lg border border-slate-600 px-3.5 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Leave</span>
-            </button>
-          )}
-        </div>
-      </section>
+      <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+            <div className="flex items-center gap-2 text-xs text-slate-300"><UsersRound className="h-4 w-4 text-indigo-300" /> Participants <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px]">{tracks.length || 1}</span></div>
+            <p className="hidden text-xs text-slate-500 md:block">Speak naturally — MeetMate is listening</p>
+          </div>
+          <div className="min-h-[360px] flex-1 p-3">
+            {!isMockLiveKit && tracks.length > 0 ? (
+              <GridLayout tracks={tracks} className="h-full min-h-[360px]">
+                <ParticipantTile />
+              </GridLayout>
+            ) : (
+              <LocalCameraStage
+                displayName={displayName}
+                cameraOn={localCamOn}
+                micOn={localMicOn}
+                streamRef={localStreamRef}
+              />
+            )}
+          </div>
+          <div aria-label="Meeting participants" className="flex items-center gap-3 border-t border-slate-800 px-4 py-3">
+            <AssistantTile />
+            <div className="hidden text-xs text-slate-500 sm:block"><p className="text-slate-300">MeetMate Assistant</p><p>AI notes are being prepared in real time</p></div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-800 bg-[#111827] px-3 py-3">
+            {isMockLiveKit ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button type="button" onClick={() => setLocalMicOn((m) => !m)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"}`}>
+                  {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}<span className="hidden xs:inline">{localMicOn ? "Mute" : "Unmute"}</span>
+                </button>
+                <button type="button" onClick={() => setLocalCamOn((c) => !c)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"}`}>
+                  {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}<span className="hidden xs:inline">{localCamOn ? "Camera" : "Start video"}</span>
+                </button>
+              </div>
+            ) : (
+              <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
+            )}
+            <span className="hidden items-center gap-2 rounded-xl bg-slate-800 px-3.5 py-2.5 text-sm text-slate-300 md:flex"><Captions className="h-4 w-4 text-indigo-300" /> Captions ready</span>
+            <span className="hidden items-center gap-2 rounded-xl bg-slate-800 px-3.5 py-2.5 text-sm text-slate-300 md:flex"><MonitorUp className="h-4 w-4 text-indigo-300" /> Share in toolbar</span>
+            {isHost ? (
+              <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#c4314b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e0445e] disabled:opacity-50"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End"}</span></button>
+            ) : (
+              <button type="button" onClick={() => void handleLeave()} className="flex items-center gap-2 rounded-xl bg-[#c4314b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e0445e]"><LogOut className="h-4 w-4" /><span>Leave</span></button>
+            )}
+          </div>
+        </section>
 
-      <aside className="grid min-h-0 gap-4 lg:grid-rows-2">
-        <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
-        <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
-      </aside>
+        <aside className="grid min-h-[520px] min-w-0 gap-3 lg:min-h-0 lg:grid-rows-2">
+          <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#172033]">
+            <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
+          </div>
+          <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#172033]">
+            <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
+          </div>
+        </aside>
+      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 lg:col-span-2">
-        <span>{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone while it is on." : "Turn on your microphone to transcribe your speech.")}</span>
-        {savingTranscript && <span role="status">Saving transcript…</span>}
-        {endError && <span role="alert" className="text-red-300">{endError}</span>}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 bg-[#0b1220] px-4 py-2 text-[11px] text-slate-400 sm:px-6">
+        <span className="flex items-center gap-1.5">{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone while it is on." : "Turn on your microphone to transcribe your speech.")}</span>
+        <span className="flex items-center gap-3">{savingTranscript && <span role="status">Saving transcript…</span>}{endError && <span role="alert" className="text-red-300">{endError}</span>}<span className="hidden items-center gap-1 sm:flex"><Sparkles className="h-3 w-3 text-indigo-300" /> AI-generated notes</span></span>
       </div>
       <RoomAudioRenderer />
       <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
