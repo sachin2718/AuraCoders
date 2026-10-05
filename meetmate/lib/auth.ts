@@ -22,7 +22,11 @@ export interface AuthUser {
  * Returns true if mock mode is explicitly forced or Supabase is not configured.
  */
 export function isMockMode(): boolean {
-  if (process.env.MOCK_MODE === "true" || process.env.NEXT_PUBLIC_MOCK_MODE === "true") {
+  if (
+    process.env.MOCK_MODE === "true" ||
+    process.env.NEXT_PUBLIC_MOCK_MODE === "true" ||
+    process.env.NEXT_PUBLIC_MOCK === "true"
+  ) {
     return true;
   }
   return !isSupabaseConfigured();
@@ -33,6 +37,20 @@ export function isMockMode(): boolean {
  * Returns AuthUser if valid, or null if unauthenticated.
  */
 export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
+  // Check demo user cookie first
+  const demoCookie = req.cookies.get("meetmate_demo_user")?.value;
+  if (demoCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(demoCookie));
+      if (parsed?.id) {
+        return {
+          id: parsed.id,
+          email: parsed.email,
+        };
+      }
+    } catch {}
+  }
+
   const authHeader = req.headers.get("authorization");
   let bearerToken: string | null = null;
 
