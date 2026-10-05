@@ -17,7 +17,7 @@ import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
 import Lobby from "./Lobby";
-import TranscriptPanel from "./TranscriptPanel";
+import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
 
@@ -103,6 +103,7 @@ function InCall({
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const [savingTranscript, setSavingTranscript] = useState(false);
+  const [localTranscriptLines, setLocalTranscriptLines] = useState<TranscriptLine[]>([]);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const isHost = Boolean(meetingId && hostId && userId && hostId === userId);
   const speechEnabled = consented && isMicrophoneEnabled && !ending;
@@ -110,6 +111,7 @@ function InCall({
   const postTranscript = useCallback((text: string, tMs: number) => {
     if (!consented) return;
     const line = { speakerName: displayName, text, tMs };
+    setLocalTranscriptLines((current) => [...current, line]);
     void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(line)), {
       reliable: true,
       topic: "transcript",
@@ -227,7 +229,7 @@ function InCall({
       </section>
 
       <aside className="grid min-h-0 gap-4 lg:grid-rows-2">
-        <TranscriptPanel supported={supported} speechError={speechError} />
+        <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
         <ChatPanel />
       </aside>
 
