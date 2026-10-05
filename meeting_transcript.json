@@ -1,0 +1,450 @@
+{
+  "meeting": {
+    "title": "Aura launch stand-up",
+    "scenario": "standup",
+    "date": "2026-10-05",
+    "day": "Monday",
+    "timezone": "Asia/Calcutta",
+    "participants": [
+      {
+        "name": "Priya",
+        "role": "PM"
+      },
+      {
+        "name": "Arjun",
+        "role": "engineer"
+      },
+      {
+        "name": "Meera",
+        "role": "designer"
+      },
+      {
+        "name": "Sam",
+        "role": "marketing"
+      }
+    ],
+    "durationMs": 492000
+  },
+  "segments": [
+    {
+      "id": 1,
+      "tMs": 5000,
+      "speaker": "Priya",
+      "text": "Morning, everyone. Let’s do the launch stand-up. We have about seven minutes, I think."
+    },
+    {
+      "id": 2,
+      "tMs": 18000,
+      "speaker": "Priya",
+      "text": "Cool. Quick check: we’re still aiming for the October nineteenth app launch?"
+    },
+    {
+      "id": 3,
+      "tMs": 23000,
+      "speaker": "Arjun",
+      "text": "As of this morning, yes. The build is mostly there. Mostly."
+    },
+    {
+      "id": 4,
+      "tMs": 40000,
+      "speaker": "Priya",
+      "text": "Let’s take Android first. What did you find?"
+    },
+    {
+      "id": 5,
+      "tMs": 47000,
+      "speaker": "Arjun",
+      "text": "On Android fourteen, onboarding can crash after you deny notifications, then go back."
+    },
+    {
+      "id": 6,
+      "tMs": 59000,
+      "speaker": "Arjun",
+      "text": "Yeah. Allow is fine, and Android thirteen is fine. I reproduced it twice."
+    },
+    {
+      "id": 7,
+      "tMs": 65000,
+      "speaker": "Priya",
+      "text": "Okay, that’s launch-blocking for me. Can you own the fix?"
+    },
+    {
+      "id": 8,
+      "tMs": 72000,
+      "speaker": "Arjun",
+      "text": "Yep. I’ll fix the Android 14 onboarding crash and get a build to QA by tomorrow afternoon."
+    },
+    {
+      "id": 9,
+      "tMs": 83000,
+      "speaker": "Arjun",
+      "text": "Will do. Actually, QA can do the first pass; Meera can check the visual state after."
+    },
+    {
+      "id": 10,
+      "tMs": 88000,
+      "speaker": "Meera",
+      "text": "Right, I meant the visual state. Not the whole device matrix."
+    },
+    {
+      "id": 11,
+      "tMs": 94000,
+      "speaker": "Priya",
+      "text": "Noted. Meera, please check the visual state once the fix lands."
+    },
+    {
+      "id": 12,
+      "tMs": 99000,
+      "speaker": "Meera",
+      "text": "Yep. The screen itself is done; I’m tightening the empty state now."
+    },
+    {
+      "id": 13,
+      "tMs": 110000,
+      "speaker": "Meera",
+      "text": "Exactly. The illustration was too loud, and the button looked like a second headline."
+    },
+    {
+      "id": 14,
+      "tMs": 120000,
+      "speaker": "Meera",
+      "text": "Smaller illustration, clearer “Add a place” button, and a hint that they can skip it."
+    },
+    {
+      "id": 15,
+      "tMs": 129000,
+      "speaker": "Meera",
+      "text": "Good. I wasn’t asking you to build it again."
+    },
+    {
+      "id": 16,
+      "tMs": 136000,
+      "speaker": "Priya",
+      "text": "When can you hand off the updated empty state?"
+    },
+    {
+      "id": 17,
+      "tMs": 140000,
+      "speaker": "Meera",
+      "text": "Today by four. I’ll export the empty state variants and drop them in the launch folder."
+    },
+    {
+      "id": 18,
+      "tMs": 150000,
+      "speaker": "Meera",
+      "text": "Sure, once I export them. Please don’t use the old blue one; it’s retired."
+    },
+    {
+      "id": 19,
+      "tMs": 155000,
+      "speaker": "Sam",
+      "text": "Got it. I’ll wait for the new files."
+    },
+    {
+      "id": 20,
+      "tMs": 162000,
+      "speaker": "Priya",
+      "text": "Sam, where are we on launch messaging?"
+    },
+    {
+      "id": 21,
+      "tMs": 173000,
+      "speaker": "Priya",
+      "text": "What’s the value prop right now?"
+    },
+    {
+      "id": 22,
+      "tMs": 177000,
+      "speaker": "Sam",
+      "text": "Find a good place nearby, save it, and get back to your day. Less “discover your next adventure.”"
+    },
+    {
+      "id": 23,
+      "tMs": 189000,
+      "speaker": "Sam",
+      "text": "Exactly. I’ll draft launch email subject options and send three to the group by noon tomorrow."
+    },
+    {
+      "id": 24,
+      "tMs": 195000,
+      "speaker": "Priya",
+      "text": "Great. Do we need the partner quote in this first email?"
+    },
+    {
+      "id": 25,
+      "tMs": 201000,
+      "speaker": "Sam",
+      "text": "We don’t have approval yet. I can ask, but I wouldn’t hold the email for it."
+    },
+    {
+      "id": 26,
+      "tMs": 206000,
+      "speaker": "Priya",
+      "text": "Agreed. No quote in the launch email unless approval comes in by Friday."
+    },
+    {
+      "id": 27,
+      "tMs": 216000,
+      "speaker": "Priya",
+      "text": "I thought we said maybe. What’s left?"
+    },
+    {
+      "id": 28,
+      "tMs": 227000,
+      "speaker": "Sam",
+      "text": "Then I can’t promise invite rewards in the campaign anyway."
+    },
+    {
+      "id": 29,
+      "tMs": 232000,
+      "speaker": "Meera",
+      "text": "Can we just leave the share button hidden for launch?"
+    },
+    {
+      "id": 30,
+      "tMs": 237000,
+      "speaker": "Priya",
+      "text": "Yes. Decision: referrals stay out of the October launch; we’ll revisit after attribution is solid."
+    },
+    {
+      "id": 31,
+      "tMs": 242000,
+      "speaker": "Arjun",
+      "text": "Works for me. I’ll keep the unfinished entry point behind the flag."
+    },
+    {
+      "id": 32,
+      "tMs": 248000,
+      "speaker": "Priya",
+      "text": "Please don’t spend time polishing the referral screen this week, then."
+    },
+    {
+      "id": 33,
+      "tMs": 258000,
+      "speaker": "Sam",
+      "text": "On the store listing, do we have final screenshots?"
+    },
+    {
+      "id": 34,
+      "tMs": 262000,
+      "speaker": "Meera",
+      "text": "Not final. The first two are ready, but the settings screen still has placeholder copy."
+    },
+    {
+      "id": 35,
+      "tMs": 273000,
+      "speaker": "Meera",
+      "text": "Probably. I need to check whether those need localized screenshots for the beta markets."
+    },
+    {
+      "id": 36,
+      "tMs": 279000,
+      "speaker": "Priya",
+      "text": "We’re only opening the beta in English-speaking markets, right?"
+    },
+    {
+      "id": 37,
+      "tMs": 286000,
+      "speaker": "Sam",
+      "text": "US and Canada for the invite wave. We haven’t committed to the UK yet."
+    },
+    {
+      "id": 38,
+      "tMs": 292000,
+      "speaker": "Priya",
+      "text": "Then let’s keep the beta English-only, US and Canada. That’s the decision for this launch wave."
+    },
+    {
+      "id": 39,
+      "tMs": 299000,
+      "speaker": "Meera",
+      "text": "Okay, I can prep the screenshots for those two. I don’t know if the store needs separate Canadian spelling, though."
+    },
+    {
+      "id": 40,
+      "tMs": 305000,
+      "speaker": "Sam",
+      "text": "I’ll check the listing requirements and tell you. I won’t edit the artwork."
+    },
+    {
+      "id": 41,
+      "tMs": 312000,
+      "speaker": "Meera",
+      "text": "Perfect. I’ll export the two ready screens today, but hold the settings one until copy is final."
+    },
+    {
+      "id": 42,
+      "tMs": 321000,
+      "speaker": "Priya",
+      "text": "Oh. We changed that last week, didn’t we?"
+    },
+    {
+      "id": 43,
+      "tMs": 326000,
+      "speaker": "Arjun",
+      "text": "The app sends place_saved. The dashboard filter still says place_bookmarked."
+    },
+    {
+      "id": 44,
+      "tMs": 336000,
+      "speaker": "Arjun",
+      "text": "It means saved-place counts are low in the report. Raw events are there."
+    },
+    {
+      "id": 45,
+      "tMs": 343000,
+      "speaker": "Priya",
+      "text": "Let’s standardize on place_saved. I’ll confirm that with analytics and update the event glossary today."
+    },
+    {
+      "id": 46,
+      "tMs": 354000,
+      "speaker": "Priya",
+      "text": "Yes, that’s yours after my confirmation. I’ll ping you by three."
+    },
+    {
+      "id": 47,
+      "tMs": 359000,
+      "speaker": "Sam",
+      "text": "I can pull the email number from the raw events for the draft, then."
+    },
+    {
+      "id": 48,
+      "tMs": 370000,
+      "speaker": "Sam",
+      "text": "Sure. The email isn’t going out until launch week, anyway."
+    },
+    {
+      "id": 49,
+      "tMs": 375000,
+      "speaker": "Meera",
+      "text": "One design question: are we still putting the notification prompt on first open?"
+    },
+    {
+      "id": 50,
+      "tMs": 380000,
+      "speaker": "Arjun",
+      "text": "It currently appears after someone saves their first place."
+    },
+    {
+      "id": 51,
+      "tMs": 388000,
+      "speaker": "Priya",
+      "text": "Let’s keep the prompt after the first save. No change needed for this build."
+    },
+    {
+      "id": 52,
+      "tMs": 398000,
+      "speaker": "Sam",
+      "text": "I need a final launch date for the email calendar. Still October nineteenth?"
+    },
+    {
+      "id": 53,
+      "tMs": 405000,
+      "speaker": "Priya",
+      "text": "Yes, target stays October nineteenth, pending the Android fix and store review. That’s a target, not a promise."
+    },
+    {
+      "id": 54,
+      "tMs": 410000,
+      "speaker": "Sam",
+      "text": "I’ll label it tentative in the calendar. No public date yet."
+    },
+    {
+      "id": 55,
+      "tMs": 415000,
+      "speaker": "Priya",
+      "text": "Good. Anything else actually blocked?"
+    },
+    {
+      "id": 56,
+      "tMs": 420000,
+      "speaker": "Meera",
+      "text": "Just final settings copy. I sent the wording yesterday, but no one has approved it."
+    },
+    {
+      "id": 57,
+      "tMs": 425000,
+      "speaker": "Priya",
+      "text": "I haven’t seen it. Can you resend the link after this?"
+    },
+    {
+      "id": 58,
+      "tMs": 430000,
+      "speaker": "Meera",
+      "text": "Yep, I’ll resend it in the launch channel. That’s just the link, not a new copy pass."
+    },
+    {
+      "id": 59,
+      "tMs": 436000,
+      "speaker": "Sam",
+      "text": "I can review the wording for tone once it’s in there, if useful."
+    },
+    {
+      "id": 60,
+      "tMs": 440000,
+      "speaker": "Meera",
+      "text": "That’d help, but I still need Priya to approve the actual product text."
+    },
+    {
+      "id": 61,
+      "tMs": 445000,
+      "speaker": "Priya",
+      "text": "I’ll review the settings copy by end of day. Sam, you can leave comments, but don’t rewrite it."
+    },
+    {
+      "id": 62,
+      "tMs": 452000,
+      "speaker": "Sam",
+      "text": "Understood."
+    },
+    {
+      "id": 63,
+      "tMs": 456000,
+      "speaker": "Arjun",
+      "text": "Anything needed from engineering for the store screenshots?"
+    },
+    {
+      "id": 64,
+      "tMs": 461000,
+      "speaker": "Meera",
+      "text": "No, the screens are captured already. I only need the final copy before I export the last one."
+    },
+    {
+      "id": 65,
+      "tMs": 466000,
+      "speaker": "Priya",
+      "text": "Okay. Quick recap: Android fix and QA build tomorrow, design exports today, email subjects tomorrow, and I confirm the event name by three."
+    },
+    {
+      "id": 66,
+      "tMs": 470000,
+      "speaker": "Arjun",
+      "text": "And I update the dashboard filter after that confirmation."
+    },
+    {
+      "id": 67,
+      "tMs": 474000,
+      "speaker": "Priya",
+      "text": "Right. Referrals stay out, beta is US and Canada in English, and the prompt stays after first save."
+    },
+    {
+      "id": 68,
+      "tMs": 479000,
+      "speaker": "Sam",
+      "text": "I’ll mark the date tentative and send the subject options tomorrow at noon."
+    },
+    {
+      "id": 69,
+      "tMs": 486000,
+      "speaker": "Meera",
+      "text": "I’ll drop the new empty states in the folder by four. Great."
+    },
+    {
+      "id": 70,
+      "tMs": 492000,
+      "speaker": "Priya",
+      "text": "Thanks, everyone. That’s it. Bye."
+    }
+  ]
+}

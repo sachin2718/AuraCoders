@@ -1,0 +1,103 @@
+{
+  "true_action_items": [
+    {
+      "title": "Fix Android 14 onboarding crash and deliver QA build",
+      "owner": "Arjun",
+      "keywords": [
+        "Android 14",
+        "onboarding crash",
+        "QA build"
+      ]
+    },
+    {
+      "title": "Check visual state after the fix lands",
+      "owner": "Meera",
+      "keywords": [
+        "visual state",
+        "fix lands"
+      ]
+    },
+    {
+      "title": "Export updated empty state variants",
+      "owner": "Meera",
+      "keywords": [
+        "export",
+        "empty state",
+        "variants"
+      ]
+    },
+    {
+      "title": "Draft launch email subject options",
+      "owner": "Sam",
+      "keywords": [
+        "launch email",
+        "subject options",
+        "draft"
+      ]
+    },
+    {
+      "title": "Check store listing requirements for screenshots",
+      "owner": "Sam",
+      "keywords": [
+        "listing requirements",
+        "screenshots",
+        "requirements"
+      ]
+    },
+    {
+      "title": "Confirm place_saved event name and update glossary",
+      "owner": "Priya",
+      "keywords": [
+        "place_saved",
+        "event name",
+        "glossary"
+      ]
+    },
+    {
+      "title": "Update dashboard filter after confirmation",
+      "owner": "Arjun",
+      "keywords": [
+        "dashboard filter",
+        "confirmation"
+      ]
+    },
+    {
+      "title": "Label launch date tentative in calendar",
+      "owner": "Sam",
+      "keywords": [
+        "launch date",
+        "tentative",
+        "calendar"
+      ]
+    },
+    {
+      "title": "Resend settings copy link in launch channel",
+      "owner": "Meera",
+      "keywords": [
+        "settings copy",
+        "resend",
+        "launch channel"
+      ]
+    },
+    {
+      "title": "Review settings copy by end of day",
+      "owner": "Priya",
+      "keywords": [
+        "review",
+        "settings copy",
+        "end of day"
+      ]
+    },
+    {
+      "title": "Prepare and export US and Canada store screenshots",
+      "owner": "Meera",
+      "keywords": [
+        "US and Canada",
+        "store screenshots",
+        "export"
+      ]
+    }
+  ],
+  "minimum_number_of_decisions": 3
+}
+
