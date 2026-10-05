@@ -1,13 +1,17 @@
 /**
  * lib/ai/llm.ts
  *
- * Single-provider Gemini wrapper used everywhere in MeetMate.
- * Swap provider: replace providerCall() only.
+ * Gemini-first LLM wrapper used by the meeting synthesis pipeline.
+ * When Gemini is not configured, it uses the server-side Groq wrapper so the
+ * demo still produces summaries with the Groq key already used by the bot.
  *
  * Env vars required:
  *   GEMINI_API_KEY or LLM_API_KEY – Gemini API key (never logged)
+ *   GROQ_API_KEY – fallback provider (never logged)
  *   GEMINI_MODEL or LLM_MODEL – Gemini Flash model name
  */
+
+import { callGroq } from "./groq";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,8 +130,20 @@ async function providerCall(
   opts: Required<LLMOpts>,
 ): Promise<{ text: string; promptTokens: number; outputTokens: number }> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.LLM_API_KEY;
+  if (!apiKey && process.env.GROQ_API_KEY) {
+    const expectsArray = prompt.includes("Return ONLY a JSON array");
+    const groqPrompt = expectsArray
+      ? `${prompt}\n\nThe provider requires a JSON object. Return {"items":[...]} where items contains the requested array.`
+      : prompt;
+    const text = await callGroq([
+      ...(opts.system ? [{ role: "system" as const, content: opts.system }] : []),
+      { role: "user" as const, content: groqPrompt },
+    ]);
+    return { text, promptTokens: 0, outputTokens: 0 };
+  }
+
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is not set.");
+    throw new Error("Configure GEMINI_API_KEY, LLM_API_KEY, or GROQ_API_KEY on the server.");
   }
 
   const model = process.env.GEMINI_MODEL || process.env.LLM_MODEL || "gemini-1.5-flash";
@@ -239,6 +255,11 @@ export async function callLLM(prompt: string, opts: LLMOpts = {}): Promise<unkno
           .replace(/\s*```\s*$/, "")
           .trim();
         result = JSON.parse(cleaned);
+        if (result && typeof result === "object" && !Array.isArray(result)) {
+          const wrapped = result as { items?: unknown; action_items?: unknown };
+          if (Array.isArray(wrapped.items)) result = wrapped.items;
+          if (Array.isArray(wrapped.action_items)) result = wrapped.action_items;
+        }
       }
 
       cache.set(cacheKey, { value: result, cachedAt: Date.now() });

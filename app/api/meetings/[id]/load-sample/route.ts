@@ -98,8 +98,11 @@ export async function POST(
     await insertSegments(segments);
 
     const processSample = async () => {
-      // Keep the mock demo usable without requiring a Gemini key.
-      if (isMockMode() && !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY) {
+      // The sample is a deterministic demo fixture when Gemini is not
+      // configured. This keeps the one-click demo reliable even when Groq is
+      // rate-limited or returns a response that cannot satisfy the long
+      // synthesis schema.
+      if (!process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY) {
         await saveResults(meetingId, {
           summary: FIXTURE_SUMMARY,
           actionItems: FIXTURE_ACTION_ITEMS,
@@ -133,7 +136,7 @@ export async function POST(
       });
     };
 
-    const useMockResults = isMockMode() && !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY;
+    const useMockResults = !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY;
     if (useMockResults) {
       await processSample();
     } else {

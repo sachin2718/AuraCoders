@@ -1,30 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient, isSupabaseConfigured } from "./supabase";
 
 export type LiveKitCredentials = { token: string; url: string };
 export type MeetingUser = { id: string | null; displayName: string };
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
-  }
-  return createClient(supabaseUrl, supabaseAnonKey);
-}
 
 export async function getSignedInDisplayName(localName?: string): Promise<string> {
   return (await getMeetingUser(localName)).displayName;
 }
 
 export async function getMeetingUser(localName?: string, suppliedUserId?: string): Promise<MeetingUser> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!isSupabaseConfigured()) {
     return {
       id: suppliedUserId?.trim() || null,
       displayName: localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`,
     };
   }
 
-  const { data: { user }, error } = await getSupabaseClient().auth.getUser();
+  const { data: { user }, error } = await createBrowserClient().auth.getUser();
   if (error) throw new Error(`Could not read the signed-in user: ${error.message}`);
   if (!user) throw new Error("Sign in before joining this meeting.");
 

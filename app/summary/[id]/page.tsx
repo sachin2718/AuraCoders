@@ -131,13 +131,23 @@ export default function MeetingSummaryPage({ params }: PageProps) {
   }, [status, fetchMeeting]);
 
   // Retry Handler
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setElapsedSeconds(0);
     setErrorMessage(null);
     if (process.env.NEXT_PUBLIC_MOCK === "true") {
       api.setMockStatus(meetingId, "processing");
+      fetchMeeting(false);
+      return;
     }
-    fetchMeeting(false);
+
+    try {
+      await api.endMeeting(meetingId);
+      await fetchMeeting(false);
+    } catch (err: unknown) {
+      const message = err instanceof ApiError ? err.message : "Could not retry note generation.";
+      setErrorMessage(message);
+      setStatus("failed");
+    }
   };
 
   // Dev simulation helpers for testing mock mode

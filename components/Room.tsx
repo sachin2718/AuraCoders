@@ -577,10 +577,7 @@ export default function Room({
         if (!cancelled) setCredentials(result);
       } catch (cause) {
         if (!cancelled) {
-          setCredentials({
-            token: "mock-jwt-token-livekit-meetmate-dev",
-            url: "wss://meetmate-demo.livekit.cloud",
-          });
+          setError(cause instanceof Error ? cause.message : "Could not prepare the meeting.");
         }
       } finally {
         if (!cancelled) setLoading(false);
