@@ -11,7 +11,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { getSupabaseServerClient, isSupabaseConfigured } from "./supabase";
+import { createServerClient, getSupabaseServerClient, isSupabaseConfigured } from "./supabase";
 
 export interface AuthUser {
   id: string;
@@ -22,7 +22,11 @@ export interface AuthUser {
  * Returns true if mock mode is explicitly forced or Supabase is not configured.
  */
 export function isMockMode(): boolean {
-  if (process.env.MOCK_MODE === "true" || process.env.NEXT_PUBLIC_MOCK_MODE === "true") {
+  if (
+    process.env.MOCK_MODE === "true" ||
+    process.env.NEXT_PUBLIC_MOCK_MODE === "true" ||
+    process.env.NEXT_PUBLIC_MOCK === "true"
+  ) {
     return true;
   }
   return !isSupabaseConfigured();
@@ -33,6 +37,20 @@ export function isMockMode(): boolean {
  * Returns AuthUser if valid, or null if unauthenticated.
  */
 export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
+  // Check demo user cookie first
+  const demoCookie = req.cookies.get("meetmate_demo_user")?.value;
+  if (demoCookie) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(demoCookie));
+      if (parsed?.id) {
+        return {
+          id: parsed.id,
+          email: parsed.email,
+        };
+      }
+    } catch {}
+  }
+
   const authHeader = req.headers.get("authorization");
   let bearerToken: string | null = null;
 
@@ -67,6 +85,18 @@ export async function getAuthUser(req: NextRequest): Promise<AuthUser | null> {
       }
     } catch {
       // Fall through to dev/mock check
+    }
+  }
+
+  // Supabase SSR stores refreshed sessions in project-scoped, sometimes chunked
+  // cookies. Let the SSR client decode those instead of guessing cookie names.
+  if (!isMockMode() && isSupabaseConfigured()) {
+    try {
+      const supabase = await createServerClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!error && user?.id) return { id: user.id, email: user.email };
+    } catch {
+      // Continue to the development/mock identity checks below.
     }
   }
 

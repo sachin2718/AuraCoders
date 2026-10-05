@@ -1,23 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { AccessToken } from "livekit-server-sdk";
+import { getAuthUser, isMockMode } from "@/lib/auth";
+import { getMeetingByCode, upsertParticipant } from "@/lib/db";
+
+const TokenRequestSchema = z.object({
+  code: z.string().trim().min(1).max(100),
+  displayName: z.string().trim().min(1).max(100),
+});
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { code, displayName } = body || {};
-
-    if (!code || typeof code !== "string") {
-      return NextResponse.json(
-        { error: "Meeting code is required." },
-        { status: 400 }
-      );
+    let user = await getAuthUser(req);
+    if (!user) {
+      if (isMockMode() || process.env.NODE_ENV !== "production") {
+        user = { id: `user-${Math.random().toString(36).substring(2, 9)}`, email: "demo@meetmate.dev" };
+      } else {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
     }
 
-    if (!displayName || typeof displayName !== "string") {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+    const parsed = TokenRequestSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Display name is required." },
-        { status: 400 }
+        { error: "Validation failed", issues: parsed.error.issues },
+        { status: 422 },
       );
+    }
+    const { code, displayName } = parsed.data;
+
+    const meeting = await getMeetingByCode(code);
+    if (!meeting && !isMockMode() && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    }
+    if (meeting && meeting.status !== "live" && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Meeting is not live" }, { status: 409 });
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -26,6 +49,12 @@ export async function POST(req: NextRequest) {
       process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     if (!apiKey || !apiSecret || !livekitUrl) {
+      if (isMockMode() || process.env.NODE_ENV !== "production") {
+        return NextResponse.json({
+          token: "mock-jwt-token-livekit-meetmate-dev",
+          url: "wss://meetmate-demo.livekit.cloud",
+        });
+      }
       return NextResponse.json(
         {
           error:
@@ -36,8 +65,9 @@ export async function POST(req: NextRequest) {
     }
 
     const at = new AccessToken(apiKey, apiSecret, {
-      identity: displayName,
+      identity: user.id,
       name: displayName,
+      ttl: "2h",
     });
 
     at.addGrant({
@@ -45,9 +75,18 @@ export async function POST(req: NextRequest) {
       room: code,
       canPublish: true,
       canSubscribe: true,
+      canPublishData: true,
     });
 
     const token = await at.toJwt();
+
+    if (meeting) {
+      await upsertParticipant({
+        meetingId: meeting.id,
+        userId: user.id,
+        displayName,
+      });
+    }
 
     return NextResponse.json({
       token,

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── Design tokens: White, Brown, and Burgundy (No Gradients) ───────── */
+/* ── Design tokens: White, Brown, and Burgundy ───────────────────────── */
 :root {
   --background: #FAF8F5;   /* Warm off-white */
   --foreground: #2A1B18;   /* Deep espresso brown */
@@ -16,6 +16,10 @@
   --brown-border: #D7CCC8;
 
   --white: #FFFFFF;
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -30,11 +34,15 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
@@ -43,9 +51,11 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans, Arial, sans-serif);
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* prevent horizontal scroll on mobile */
+  min-height: 100dvh;
 }
 
 /* ── Accessible Keyboard Focus Styles ──────────────────────────────────────── */

@@ -62,7 +62,10 @@ export function useSpeech({ enabled, startedAt, lang = "en-US", onFinal }: UseSp
             const result = event.results[index];
             if (!result?.isFinal) continue;
             const text = result[0]?.transcript?.trim();
-            if (text) onFinalRef.current({ text, tMs: Math.max(0, Date.now() - startedAt) });
+            if (text) {
+              setError(null);
+              onFinalRef.current({ text, tMs: Math.max(0, Date.now() - startedAt) });
+            }
           }
         };
         recognition.onerror = (event) => {
@@ -82,7 +85,6 @@ export function useSpeech({ enabled, startedAt, lang = "en-US", onFinal }: UseSp
           if (!stopped) restartTimer = window.setTimeout(start, 300);
         };
         recognition.start();
-        setError(null);
       } catch (cause) {
         if (!stopped) setError(cause instanceof Error ? cause.message : "Speech recognition could not start.");
       }
@@ -92,7 +94,16 @@ export function useSpeech({ enabled, startedAt, lang = "en-US", onFinal }: UseSp
     return () => {
       stopped = true;
       if (restartTimer !== undefined) window.clearTimeout(restartTimer);
-      recognition?.stop();
+      try {
+        recognition?.abort();
+      } catch {
+        // ignore abort errors if already stopped
+      }
+      try {
+        recognition?.stop();
+      } catch {
+        // ignore stop errors
+      }
     };
   }, [enabled, lang, startedAt]);
 
