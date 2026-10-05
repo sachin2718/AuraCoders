@@ -39,6 +39,10 @@
 }
 
 /* ── Base ──────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-tap-highlight-color: transparent;
@@ -50,6 +54,8 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* prevent horizontal scroll on mobile */
+  min-height: 100dvh;
 }
 
 /* ── Accessible Keyboard Focus Styles ──────────────────────────────────────── */
