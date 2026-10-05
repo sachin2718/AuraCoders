@@ -195,6 +195,8 @@ function InCall({
   const localStreamRef = useRef<MediaStream | null>(null);
   const [localCamOn, setLocalCamOn] = useState(true);
   const [localMicOn, setLocalMicOn] = useState(true);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
 
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
@@ -239,7 +241,25 @@ function InCall({
 
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
-  const speechEnabled = consented && (isMockLiveKit ? localMicOn : isMicrophoneEnabled) && !ending;
+  const speechEnabled = captionsEnabled && consented && (isMockLiveKit ? localMicOn : isMicrophoneEnabled) && !ending;
+
+  const toggleScreenShare = async () => {
+    if (isMockLiveKit) {
+      onNotice({ kind: "info", message: "Screen sharing becomes available after connecting to a LiveKit room." });
+      return;
+    }
+
+    const nextValue = !screenShareEnabled;
+    try {
+      await localParticipant.setScreenShareEnabled(nextValue);
+      setScreenShareEnabled(nextValue);
+    } catch (error) {
+      onNotice({
+        kind: "error",
+        message: permissionMessage(error) ?? "Could not change screen sharing. Check browser permissions and try again.",
+      });
+    }
+  };
 
   /**
    * Explicitly releases camera, microphone, screen share, and LiveKit tracks
@@ -477,8 +497,24 @@ function InCall({
             ) : (
               <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
             )}
-            <span className="hidden items-center gap-2 rounded-xl bg-slate-800 px-3.5 py-2.5 text-sm text-slate-300 md:flex"><Captions className="h-4 w-4 text-indigo-300" /> Captions ready</span>
-            <span className="hidden items-center gap-2 rounded-xl bg-slate-800 px-3.5 py-2.5 text-sm text-slate-300 md:flex"><MonitorUp className="h-4 w-4 text-indigo-300" /> Share in toolbar</span>
+            <button
+              type="button"
+              aria-pressed={captionsEnabled}
+              onClick={() => setCaptionsEnabled((enabled) => !enabled)}
+              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition md:flex ${captionsEnabled ? "bg-indigo-500/20 text-indigo-100" : "bg-slate-800 text-slate-400"}`}
+            >
+              <Captions className="h-4 w-4 text-indigo-300" />
+              {captionsEnabled ? "Captions on" : "Captions off"}
+            </button>
+            <button
+              type="button"
+              aria-pressed={screenShareEnabled}
+              onClick={() => void toggleScreenShare()}
+              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition md:flex ${screenShareEnabled ? "bg-indigo-500/20 text-indigo-100" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
+            >
+              <MonitorUp className="h-4 w-4 text-indigo-300" />
+              {screenShareEnabled ? "Stop sharing" : "Share screen"}
+            </button>
             {isHost ? (
               <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#c4314b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e0445e] disabled:opacity-50"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End"}</span></button>
             ) : (
