@@ -515,7 +515,7 @@ function InCall({
 
       <aside className="grid min-h-0 gap-4 lg:grid-rows-2">
         <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
-        <ChatPanel />
+        <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
       </aside>
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 lg:col-span-2">

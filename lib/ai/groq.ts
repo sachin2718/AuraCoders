@@ -14,8 +14,10 @@ type GroqTranscriptionResponse = {
 };
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
-const FALLBACK_MODEL = "llama-3.1-8b-instant";
+// Groq retired the older Llama IDs for some projects. GPT-OSS is the current
+// production model family and supports JSON object responses.
+const DEFAULT_MODEL = "openai/gpt-oss-120b";
+const FALLBACK_MODEL = "openai/gpt-oss-20b";
 
 export async function callGroq(messages: GroqMessage[]): Promise<string> {
   const apiKey = process.env.GROQ_API_KEY;
