@@ -5,7 +5,7 @@ import {
   VideoConference,
   useRoomContext,
 } from "@livekit/components-react";
-import { RoomEvent } from "livekit-client";
+import { MediaDeviceFailure, RoomEvent } from "livekit-client";
 import "@livekit/components-styles";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -71,7 +71,8 @@ export default function Room({ code }: RoomProps) {
     let cancelled = false;
     async function join() {
       try {
-        const name = await getSignedInDisplayName();
+        const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
+        const name = await getSignedInDisplayName(localName);
         if (cancelled) return;
         setDisplayName(name);
         const result = await getLiveKitCredentials(code, name);
@@ -140,9 +141,18 @@ export default function Room({ code }: RoomProps) {
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
           onError={(cause) => handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") })}
-          onMediaDeviceFailure={(failure) => {
-            const message = permissionMessage(failure);
-            if (message) handleNotice({ kind: "error", message });
+          onMediaDeviceFailure={(failure, kind) => {
+            if (failure === MediaDeviceFailure.PermissionDenied) {
+              handleNotice({
+                kind: "error",
+                message: `Allow ${kind === "audioinput" ? "microphone" : "camera"} access in your browser settings, then rejoin.`,
+              });
+            } else if (failure) {
+              handleNotice({
+                kind: "error",
+                message: `Could not start ${kind === "audioinput" ? "microphone" : "camera"} (${failure}). Check that the device is connected and not in use.`,
+              });
+            }
           }}
         >
           <ConnectionNotices onNotice={handleNotice} />
