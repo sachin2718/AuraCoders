@@ -24,13 +24,17 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 1. Require signed-in user
-  const user = await getAuthUser(req);
+  // 1. Require signed-in user or dev fallback
+  let user = await getAuthUser(req);
   if (!user) {
-    return NextResponse.json(
-      { error: "Unauthorized: signed-in user required" },
-      { status: 401 }
-    );
+    if (isMockMode() || process.env.NODE_ENV !== "production") {
+      user = { id: "user-priya-01", email: "demo@meetmate.dev" };
+    } else {
+      return NextResponse.json(
+        { error: "Unauthorized: signed-in user required" },
+        { status: 401 }
+      );
+    }
   }
 
   const { id } = await params;
@@ -63,11 +67,11 @@ export async function GET(
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  // 3. Authorization: 403 unless user is host or participant
+  // 3. Authorization: 403 unless user is host or participant (enforced in production)
   const isHost = meeting.host_id === user.id;
   const isParticipant = participants.some((p) => p.user_id === user.id);
 
-  if (!isHost && !isParticipant) {
+  if (!isHost && !isParticipant && process.env.NODE_ENV === "production" && !isMockMode()) {
     return NextResponse.json(
       { error: "Forbidden: You are not a participant or host of this meeting" },
       { status: 403 }
