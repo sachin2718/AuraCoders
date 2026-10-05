@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast, Toaster } from "@/components/ui/toast";
+import MeetMateAssistant from "@/components/MeetMateAssistant";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -187,6 +188,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8 pb-12">
       <Toaster />
+      <MeetMateAssistant />
 
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

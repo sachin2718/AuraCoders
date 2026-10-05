@@ -3,7 +3,6 @@
 import {
   ControlBar,
   GridLayout,
-  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -20,6 +19,7 @@ import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
 import Lobby from "./Lobby";
 import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
+import MeetMateAssistant from "./MeetMateAssistant";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
 import { useVisualShare } from "../lib/visual";
@@ -358,7 +358,7 @@ function InCall({
         <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
           <ControlBar
             variation="verbose"
-            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }}
+            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
             onDeviceError={({ source, error }) => onNotice({
               kind: "error",
               message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
@@ -399,6 +399,7 @@ function InCall({
         {endError && <span role="alert" className="text-red-300">{endError}</span>}
       </div>
       <RoomAudioRenderer />
+      <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
     </div>
   );
 }
@@ -445,9 +446,8 @@ export default function Room({
         const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
         const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
         const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
-
         const user = await getMeetingUser(localName, effectiveUserId);
-        
+
         let meeting: { id: string; host_id?: string | null } | null = null;
         if (suppliedMeetingId) {
           meeting = { id: suppliedMeetingId, host_id: suppliedHostId || null };
@@ -458,19 +458,15 @@ export default function Room({
             meeting = { id: `demo-${code.toLowerCase()}`, host_id: "user-priya-01" };
           }
         }
-
         if (cancelled) return;
 
         setMeetingId(meeting.id);
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
-
-        // Resolve user ID: explicit prop -> query param -> auth session -> host fallback -> demo fallback
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
-          meeting.host_id ||
-          "user-priya-01";
+          (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null);
         setUserId(resolvedUserId);
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
@@ -576,21 +572,19 @@ export default function Room({
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <LayoutContextProvider>
-          <ConnectionNotices onNotice={handleNotice} />
-          <InCall
-            code={code}
-            displayName={displayName}
-            consented={consented}
-            meetingId={meetingId}
-            hostId={hostId}
-            userId={userId}
-            startedAt={sessionStartedAt}
-            onNotice={handleNotice}
-            onMeetingEnded={navigateToSummary}
-            onLeave={() => router.push("/dashboard")}
-          />
-        </LayoutContextProvider>
+        <ConnectionNotices onNotice={handleNotice} />
+        <InCall
+          code={code}
+          displayName={displayName}
+          consented={consented}
+          meetingId={meetingId}
+          hostId={hostId}
+          userId={userId}
+          startedAt={sessionStartedAt}
+          onNotice={handleNotice}
+          onMeetingEnded={navigateToSummary}
+          onLeave={() => router.push("/dashboard")}
+        />
       </LiveKitRoom>
     </main>
   );
