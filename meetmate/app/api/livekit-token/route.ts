@@ -35,56 +35,16 @@ const TokenRequestSchema = z.object({
   displayName: z.string().min(1, "displayName is required").max(50),
 });
 
-/**
- * Extracts the authenticated Supabase user ID from the request.
- * Checks:
- * 1. Authorization: Bearer <supabase_jwt>
- * 2. Supabase auth cookies
- * 3. x-user-id header (for development & testing)
- */
+import { getAuthUser } from "@/lib/auth";
+
 async function getAuthenticatedUserId(req: NextRequest): Promise<string | null> {
-  const authHeader = req.headers.get("authorization");
-  let bearerToken: string | null = null;
-
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    bearerToken = authHeader.substring(7).trim();
-  }
-
-  // Check auth cookies if no bearer token
-  if (!bearerToken) {
-    const sbAccessToken =
-      req.cookies.get("sb-access-token")?.value ||
-      req.cookies.get("supabase-auth-token")?.value;
-    if (sbAccessToken) {
-      bearerToken = sbAccessToken;
-    }
-  }
-
-  // Verify against Supabase Auth when configured
-  if (bearerToken && isSupabaseConfigured()) {
-    try {
-      const supabase = getSupabaseServerClient();
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser(bearerToken);
-
-      if (!error && user?.id) {
-        return user.id;
-      }
-    } catch {
-      // If token verification fails, fall through
-    }
-  }
-
-  // If a mock/test bearer token is provided in dev (e.g. "Bearer user-arjun-0002" or UUID)
-  if (bearerToken && !isSupabaseConfigured()) {
-    // In local zero-config mode, accept the token as the user identifier if valid format
-    return bearerToken;
+  const authUser = await getAuthUser(req);
+  if (authUser?.id) {
+    return authUser.id;
   }
 
   // Development/Test header support
-  const devUserId = req.headers.get("x-user-id");
+  const devUserId = req.headers.get("x-user-id") || req.headers.get("x-mock-user-id");
   if (devUserId) {
     return devUserId.trim();
   }

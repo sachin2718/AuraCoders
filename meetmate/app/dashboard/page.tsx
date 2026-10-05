@@ -75,13 +75,13 @@ export default function DashboardPage() {
     const title = newTitle.trim() || "Untitled Meeting";
     try {
       setIsCreating(true);
-      const { code } = await api.createMeeting(title);
+      const { id, code } = await api.createMeeting(title);
       toast({
         title: "Meeting Created",
         description: `Room code: ${code}. Redirecting...`,
         variant: "success",
       });
-      router.push(`/meeting/${encodeURIComponent(code)}`);
+      router.push(`/meeting/${encodeURIComponent(code)}?meetingId=${encodeURIComponent(id)}`);
     } catch (err: unknown) {
       const message =
         err instanceof ApiError ? err.message : "Could not create meeting";
@@ -386,7 +386,7 @@ export default function DashboardPage() {
                 if (isReady) {
                   router.push(`/summary/${encodeURIComponent(item.id)}`);
                 } else if (isLive) {
-                  router.push(`/meeting/${encodeURIComponent(item.code)}`);
+                  router.push(`/meeting/${encodeURIComponent(item.code)}?meetingId=${encodeURIComponent(item.id)}`);
                 }
               };
 
