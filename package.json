@@ -9,7 +9,8 @@
     "test:end": "tsx scripts/test-end-route.ts",
     "test:todos": "tsx scripts/test-cross-user-todos.ts",
     "test:sample": "tsx scripts/test-load-sample.ts",
-    "test:db": "tsx scripts/test-db.ts"
+    "test:db": "tsx scripts/test-db.ts",
+    "evals": "tsx evals/run.ts"
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",

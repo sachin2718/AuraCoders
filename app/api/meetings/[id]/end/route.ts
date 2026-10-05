@@ -36,6 +36,9 @@ function sanitizeError(err: unknown): string {
   if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 5) {
     message = message.split(process.env.GEMINI_API_KEY).join("[REDACTED_KEY]");
   }
+  if (process.env.LLM_API_KEY && process.env.LLM_API_KEY.length > 5) {
+    message = message.split(process.env.LLM_API_KEY).join("[REDACTED_KEY]");
+  }
   if (
     process.env.SUPABASE_SERVICE_ROLE_KEY &&
     process.env.SUPABASE_SERVICE_ROLE_KEY.length > 5
@@ -72,42 +75,27 @@ async function executeEndPipeline(id: string): Promise<void> {
       throw new Error(`Meeting ${id} not found during pipeline execution`);
     }
 
-    // 2. runPipeline (import from lib/ai/pipeline, owned by P3)
-    const pipelineResult = await runPipeline(data);
-
-    // 3. map owner_name to participants
-    const participants = data.participants || [];
-    const mappedActionItems = (pipelineResult.actionItems || []).map((item) => {
-      let matchedOwnerId = item.owner_id || null;
-      let matchedOwnerName = item.owner_name || null;
-
-      if (matchedOwnerName && !matchedOwnerId) {
-        const cleanName = matchedOwnerName.toLowerCase().trim();
-        const matchedParticipant = participants.find((p) => {
-          const pName = (p.display_name || "").toLowerCase().trim();
-          return (
-            pName === cleanName ||
-            pName.split(/\s+/).includes(cleanName) ||
-            cleanName.split(/\s+/).includes(pName)
-          );
-        });
-
-        if (matchedParticipant) {
-          matchedOwnerId = matchedParticipant.user_id;
-          matchedOwnerName = matchedParticipant.display_name;
-        }
-      }
-
-      return {
-        ...item,
-        owner_id: matchedOwnerId,
-        owner_name: matchedOwnerName,
-        priority: item.priority || "medium",
-        status: item.status || "todo",
-        source_quote: item.source_quote || "",
-        t_ms: item.t_ms || 0,
-      };
+    // 2. Adapt the P4 database result to P3's validated AI pipeline input.
+    const pipelineResult = await runPipeline({
+      meetingId: id,
+      meetingDate: data.meeting.started_at,
+      timezone: process.env.MEETING_TIMEZONE || "UTC",
+      participants: data.participants.map(({ user_id, display_name }) => ({ user_id, display_name })),
+      segments: data.segments.map(({ speaker_name, text, t_ms }) => ({ speaker_name, text, t_ms })),
+      visualNotes: data.visualNotes.map(({ t_ms, description }) => ({ t_ms, description })),
     });
+
+    // 3. Save only contract fields. P3 validates source quotes and resolves owners.
+    const mappedActionItems = pipelineResult.action_items.map((item) => ({
+      owner_id: item.owner_id,
+      owner_name: item.owner_name,
+      title: item.title,
+      due_date: item.due_date,
+      priority: item.priority,
+      status: "todo" as const,
+      source_quote: item.source_quote,
+      t_ms: item.timestamp_ms,
+    }));
 
     // 4. saveResults
     await saveResults(id, {

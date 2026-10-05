@@ -1,0 +1,21 @@
+{
+  "action_items": [
+    {
+      "owner": "Dan Okonkwo",
+      "keywords": ["Supabase", "key"]
+    },
+    {
+      "owner": "Alice Chen",
+      "keywords": ["Figma"]
+    },
+    {
+      "owner": "Bob Sharma",
+      "keywords": ["tests"]
+    },
+    {
+      "owner": "Dan Okonkwo",
+      "keywords": ["rate", "limiting"]
+    }
+  ],
+  "decisions_count_min": 2
+}

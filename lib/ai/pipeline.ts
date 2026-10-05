@@ -1,287 +1,332 @@
 /**
  * lib/ai/pipeline.ts
- * AI summarization and action item extraction pipeline (Owned by P3).
  *
- * RULES:
- * - Server-only: never imported in client components.
- * - Never log or expose secret API keys.
- * - Enforces strict network timeouts (AbortSignal) so failing keys or down LLMs never hang.
- * - Fails fast with clear errors when LLM keys are revoked, killed, or invalid.
+ * runPipeline(input) → PipelineOutput
+ *
+ * Steps:
+ *  0. Guard: short transcript → return stub without calling LLM.
+ *  1. Format transcript segments into "[mm:ss] Speaker: text" lines.
+ *  2. Chunk if > 10 minutes of content → hierarchical summarisation.
+ *  3. Run summary + action-item LLM calls IN PARALLEL.
+ *  4. Parse/validate with Zod; retry once on failure.
+ *  5. Map owner names → user IDs (owners.ts).
+ *  6. Verify source quotes (verify.ts); drop unverified items.
+ *  7. Return PipelineOutput.
  */
 
-import { MeetingData, Summary, ActionItem } from "@/lib/db";
+import { callLLM } from "./callLLM";
+import {
+  SummarySchema,
+  ActionItemsSchema,
+  type Summary,
+  type ActionItem,
+  type ActionItems,
+} from "./schemas";
+import { buildSummaryPrompt, buildActionPrompt, type PromptInput } from "./prompts";
+import { resolveOwners, type Participant } from "./owners";
+import { quoteExistsInTranscript } from "./verify";
 
-export interface PipelineResult {
-  summary: Omit<Summary, "meeting_id">;
-  actionItems: Array<Omit<ActionItem, "id" | "meeting_id">>;
+// ─── Public Types ─────────────────────────────────────────────────────────────
+
+/** One DB transcript_segments row (only the fields we need). */
+export interface TranscriptSegment {
+  speaker_name: string;
+  text: string;
+  t_ms: number;
 }
 
-function formatMs(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+/** One DB visual_notes row. */
+export interface VisualNote {
+  t_ms: number;
+  description: string;
 }
 
-/**
- * Executes the AI meeting intelligence pipeline.
- * Throws immediately if LLM key is revoked/killed/invalid or if API call fails.
- */
-export async function runPipeline(
-  meetingData: MeetingData
-): Promise<PipelineResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  // 1. Check for explicitly killed, invalid, or revoked LLM keys
-  if (
-    process.env.KILL_LLM_KEY === "true" ||
-    apiKey === "killed" ||
-    apiKey === "invalid" ||
-    apiKey === "revoked" ||
-    apiKey === ""
-  ) {
-    throw new Error(
-      "LLM API key is invalid or revoked (killed). AI pipeline execution failed."
-    );
-  }
-
-  // 2. Check for missing key
-  if (!apiKey) {
-    // If explicit mock mode is set for pipeline testing, generate structured mock result
-    if (process.env.MOCK_AI === "true" || process.env.MOCK_PIPELINE === "true") {
-      return generateMockPipelineResult(meetingData);
-    }
-    throw new Error(
-      "LLM API key is not configured: GEMINI_API_KEY is missing."
-    );
-  }
-
-  // 3. Handle mock/test keys
-  if (
-    apiKey === "mock" ||
-    apiKey === "test" ||
-    apiKey.startsWith("mock-") ||
-    apiKey.startsWith("test-")
-  ) {
-    return generateMockPipelineResult(meetingData);
-  }
-
-  // 4. Real Gemini API call with strict timeout (no hang!)
-  return await callGemini(meetingData, apiKey);
+export interface PipelineInput {
+  meetingId: string;
+  meetingDate: string; // ISO date string, e.g. "2025-03-14"
+  timezone: string;    // IANA, e.g. "Asia/Kolkata"
+  participants: Participant[];
+  segments: TranscriptSegment[];
+  visualNotes?: VisualNote[];
 }
 
-/**
- * Calls Google Gemini REST API with strict AbortSignal timeout.
- */
-async function callGemini(
-  meetingData: MeetingData,
-  apiKey: string
-): Promise<PipelineResult> {
-  const transcriptLines = (meetingData.segments || []).map(
-    (s) => `[${formatMs(s.t_ms)}] ${s.speaker_name}: ${s.text}`
-  );
+export interface EnrichedActionItem extends ActionItem {
+  /** Resolved from owner_name via fuzzy matching. null if unresolved. */
+  owner_id: string | null;
+  /** True if the source_quote was found (or near-found) in the transcript. */
+  quote_verified: boolean;
+  /** 0-1 confidence from the quote verifier. */
+  quote_confidence: number;
+}
 
-  const visualLines = (meetingData.visualNotes || []).map(
-    (v) => `[${formatMs(v.t_ms)}] Visual Note: ${v.description}`
-  );
-
-  const prompt = `You are MeetMate, an AI meeting assistant. Analyze the following meeting information and generate a concise executive summary and individual action items.
-
-Meeting Title: ${meetingData.meeting?.title || "Meeting"}
-Participants: ${(meetingData.participants || []).map((p) => p.display_name).join(", ")}
-
-Transcript:
-${transcriptLines.length > 0 ? transcriptLines.join("\n") : "(No transcript available)"}
-
-${visualLines.length > 0 ? `Visual Whiteboard Notes:\n${visualLines.join("\n")}` : ""}
-
-Respond ONLY with valid JSON matching this schema:
-{
-  "summary": {
-    "tldr": "1-2 sentence executive overview of what was discussed and agreed upon",
-    "key_points": ["bullet 1", "bullet 2", "..."],
-    "decisions": ["concrete decision 1", "..."],
-    "open_questions": ["unresolved question or follow up", "..."]
-  },
-  "actionItems": [
-    {
-      "owner_name": "Name of assigned participant or null if unassigned",
-      "title": "Action item description",
-      "due_date": "YYYY-MM-DD or null",
-      "priority": "low | medium | high",
-      "status": "todo",
-      "source_quote": "Verbatim quote or relevant sentence from transcript",
-      "t_ms": 0
-    }
-  ]
-}`;
-
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-  // Enforce a strict 20-second timeout so bad connections or API issues never hang
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json",
-      },
-    }),
-    signal: AbortSignal.timeout(20000),
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => "");
-    // Sanitize any potential key reflections
-    const cleanError = errorBody.replace(new RegExp(apiKey, "g"), "[REDACTED]");
-    throw new Error(
-      `Gemini LLM request failed with status ${response.status}: ${cleanError.slice(0, 150)}`
-    );
-  }
-
-  const payload = await response.json();
-  const text = payload.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error("Gemini returned an empty completion");
-  }
-
-  const parsed = JSON.parse(text);
-  if (!parsed.summary || typeof parsed.summary.tldr !== "string") {
-    throw new Error("Invalid summary format returned by LLM");
-  }
-
-  return {
-    summary: {
-      tldr: parsed.summary.tldr,
-      key_points: Array.isArray(parsed.summary.key_points)
-        ? parsed.summary.key_points
-        : [],
-      decisions: Array.isArray(parsed.summary.decisions)
-        ? parsed.summary.decisions
-        : [],
-      open_questions: Array.isArray(parsed.summary.open_questions)
-        ? parsed.summary.open_questions
-        : [],
-    },
-    actionItems: Array.isArray(parsed.actionItems)
-      ? parsed.actionItems.map((item: {
-          owner_name?: string | null;
-          owner_id?: string | null;
-          title?: string;
-          due_date?: string | null;
-          priority?: string;
-          source_quote?: string;
-          t_ms?: number;
-        }) => ({
-          owner_name: item.owner_name || null,
-          owner_id: item.owner_id || null,
-          title: String(item.title || "Action item"),
-          due_date: item.due_date || null,
-          priority: (["low", "medium", "high"].includes(String(item.priority))
-            ? item.priority
-            : "medium") as "low" | "medium" | "high",
-          status: "todo" as const,
-          source_quote: String(item.source_quote || ""),
-          t_ms: typeof item.t_ms === "number" ? item.t_ms : 0,
-        }))
-      : [],
+export interface PipelineOutput {
+  summary: Summary;
+  action_items: EnrichedActionItem[];
+  /** Diagnostics for debugging / logging. */
+  meta: {
+    segmentCount: number;
+    wordCount: number;
+    chunked: boolean;
+    chunkCount: number;
+    droppedItems: number;
+    elapsedMs: number;
   };
 }
 
-/**
- * Generates structured summaries and action items from transcripts when using mock/test keys.
- */
-function generateMockPipelineResult(meetingData: MeetingData): PipelineResult {
-  const segments = meetingData.segments || [];
-  const participants = meetingData.participants || [];
-  const title = meetingData.meeting?.title || "Meeting";
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-  const speakerNames = Array.from(
-    new Set(segments.map((s) => s.speaker_name))
-  ).filter(Boolean);
-  const participantsSummary =
-    speakerNames.length > 0
-      ? speakerNames.join(", ")
-      : participants.map((p) => p.display_name).join(", ") || "the team";
+const MIN_SEGMENTS = 5;
+const MIN_WORDS = 40;
+const CHUNK_WINDOW_MS = 10 * 60 * 1000; // 10 minutes in ms
+const JSON_RETRY_SUFFIX =
+  "\n\nIMPORTANT: Your previous response was not valid JSON. Return ONLY the JSON — no prose, no markdown fences.";
 
-  const tldr =
-    segments.length > 0
-      ? `The team (${participantsSummary}) aligned on ${title.toLowerCase()} priorities, discussed deliverables, and assigned follow-up action items.`
-      : `Meeting concluded for ${title} without recorded transcript segments.`;
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-  const keyPoints =
-    segments.length > 0
-      ? segments.slice(0, 4).map((s) => `${s.speaker_name}: "${s.text}"`)
-      : [`Discussion on ${title}`];
+function msToTimestamp(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
 
-  const decisions = [
-    `Aligned on action items and execution timeline for ${title}.`,
-    "Post-meeting review and task tracking approved.",
-  ];
+function formatSegments(segments: TranscriptSegment[]): string[] {
+  return segments.map(
+    (s) => `[${msToTimestamp(s.t_ms)}] ${s.speaker_name}: ${s.text.trim()}`,
+  );
+}
 
-  const openQuestions = [
-    "Are there any blocking dependencies before the next sync?",
-  ];
+function formatVisualNotes(notes: VisualNote[]): string[] {
+  return notes.map((n) => `[${msToTimestamp(n.t_ms)}] ${n.description.trim()}`);
+}
 
-  const actionItems: Array<Omit<ActionItem, "id" | "meeting_id">> = [];
+function countWords(segments: TranscriptSegment[]): number {
+  return segments.reduce((acc, s) => acc + s.text.split(/\s+/).filter(Boolean).length, 0);
+}
 
-  // Look for action phrases in segments
-  const actionKeywords = [
-    "i will",
-    "i'll",
-    "handle",
-    "action item",
-    "todo",
-    "need to",
-    "review",
-    "build",
-    "write",
-    "create",
-    "set up",
-  ];
+function buildTranscriptText(segments: TranscriptSegment[]): string {
+  return segments.map((s) => s.text).join(" ");
+}
 
-  for (const s of segments) {
-    const lower = s.text.toLowerCase();
-    if (actionKeywords.some((kw) => lower.includes(kw))) {
-      actionItems.push({
-        owner_name: s.speaker_name,
-        owner_id: null,
-        title: s.text.replace(/^(i'll|i will|let's|we need to)\s+/i, "").trim(),
-        due_date: null,
-        priority: "medium",
-        status: "todo",
-        source_quote: `${s.speaker_name}: "${s.text}"`,
-        t_ms: s.t_ms,
-      });
+/** Split segments into ~10-minute windows by t_ms. */
+function chunkSegments(segments: TranscriptSegment[]): TranscriptSegment[][] {
+  const chunks: TranscriptSegment[][] = [];
+  let current: TranscriptSegment[] = [];
+  let windowStart = segments[0]?.t_ms ?? 0;
+
+  for (const seg of segments) {
+    if (seg.t_ms - windowStart >= CHUNK_WINDOW_MS && current.length > 0) {
+      chunks.push(current);
+      current = [];
+      windowStart = seg.t_ms;
+    }
+    current.push(seg);
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+// ─── LLM call with one retry ──────────────────────────────────────────────────
+
+async function callWithRetry<T>(
+  prompt: string,
+  schema: { parse: (v: unknown) => T },
+  label: string,
+): Promise<T> {
+  // First attempt
+  try {
+    const raw = await callLLM(prompt, { json: true, temperature: 0.1 });
+    return schema.parse(raw);
+  } catch (firstErr) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(`[pipeline] ${label} parse failed on attempt 1, retrying…`, firstErr);
     }
   }
 
-  // Ensure at least 1-2 action items exist if there were segments
-  if (actionItems.length === 0 && segments.length > 0) {
-    for (let i = 0; i < Math.min(segments.length, 2); i++) {
-      const seg = segments[i];
-      actionItems.push({
-        owner_name: seg.speaker_name,
-        owner_id: null,
-        title: `Follow up on: ${seg.text}`,
-        due_date: null,
-        priority: "medium",
-        status: "todo",
-        source_quote: `${seg.speaker_name}: "${seg.text}"`,
-        t_ms: seg.t_ms,
-      });
+  // Retry with reminder appended
+  const raw2 = await callLLM(prompt + JSON_RETRY_SUFFIX, {
+    json: true,
+    temperature: 0.1,
+  });
+  try {
+    return schema.parse(raw2);
+  } catch (secondErr) {
+    throw new Error(
+      `[pipeline] ${label} parse failed after 2 attempts: ${String(secondErr)}`,
+    );
+  }
+}
+
+// ─── Short-circuit stub ───────────────────────────────────────────────────────
+
+function makeStubOutput(
+  segments: TranscriptSegment[],
+  wordCount: number,
+  startMs: number,
+): PipelineOutput {
+  return {
+    summary: {
+      tldr: "Not enough content to summarise.",
+      key_points: [],
+      decisions: [],
+      open_questions: [],
+    },
+    action_items: [],
+    meta: {
+      segmentCount: segments.length,
+      wordCount,
+      chunked: false,
+      chunkCount: 0,
+      droppedItems: 0,
+      elapsedMs: Date.now() - startMs,
+    },
+  };
+}
+
+// ─── Hierarchical chunked summarisation ──────────────────────────────────────
+
+async function summariseChunks(
+  chunks: TranscriptSegment[][],
+  baseInput: PromptInput,
+): Promise<Summary> {
+  // Summarise each chunk in parallel
+  const chunkSummaries = await Promise.all(
+    chunks.map(async (chunk, i) => {
+      const lines = formatSegments(chunk);
+      const chunkPrompt = buildSummaryPrompt({ ...baseInput, transcriptLines: lines });
+      const summary = await callWithRetry<Summary>(chunkPrompt, SummarySchema, `summary-chunk-${i}`);
+      // Flatten into a mini-transcript for the meta-summary
+      return [
+        `[Chunk ${i + 1}]`,
+        `TL;DR: ${summary.tldr}`,
+        `Key points: ${summary.key_points.join(" | ")}`,
+        `Decisions: ${summary.decisions.join(" | ") || "none"}`,
+        `Open questions: ${summary.open_questions.join(" | ") || "none"}`,
+      ].join("\n");
+    }),
+  );
+
+  // Meta-summary: summarise the summaries
+  const metaPrompt = buildSummaryPrompt({
+    ...baseInput,
+    transcriptLines: chunkSummaries,
+    visualNotes: [], // already embedded in chunk summaries
+  });
+  return callWithRetry(metaPrompt, SummarySchema, "meta-summary");
+}
+
+// ─── Main pipeline ────────────────────────────────────────────────────────────
+
+export async function runPipeline(input: PipelineInput): Promise<PipelineOutput> {
+  const startMs = Date.now();
+  const { segments, participants, visualNotes = [], meetingDate, timezone } = input;
+
+  const wordCount = countWords(segments);
+  const participantNames = participants.map((p) => p.display_name);
+
+  // ── Step 0: Guard — too short ─────────────────────────────────────────────
+  if (segments.length < MIN_SEGMENTS || wordCount < MIN_WORDS) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `[pipeline] transcript too short (${segments.length} segs, ${wordCount} words) — returning stub`,
+      );
     }
+    return makeStubOutput(segments, wordCount, startMs);
+  }
+
+  // ── Step 1: Format lines ──────────────────────────────────────────────────
+  const transcriptLines = formatSegments(segments);
+  const visualLines = formatVisualNotes(visualNotes);
+  const transcriptText = buildTranscriptText(segments);
+
+  const basePromptInput: PromptInput = {
+    participantNames,
+    meetingDate,
+    timezone,
+    transcriptLines,
+    visualNotes: visualLines,
+  };
+
+  // ── Step 2: Chunking decision ─────────────────────────────────────────────
+  const maxTms = segments.at(-1)?.t_ms ?? 0;
+  const needsChunking = maxTms > CHUNK_WINDOW_MS;
+  const chunks = needsChunking ? chunkSegments(segments) : [segments];
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      `[pipeline] segments=${segments.length} words=${wordCount} ` +
+        `chunked=${needsChunking} chunks=${chunks.length}`,
+    );
+  }
+
+  // ── Step 3: Parallel LLM calls ────────────────────────────────────────────
+  const actionPrompt = buildActionPrompt(basePromptInput);
+
+  const [summary, rawActionItems] = await Promise.all([
+    // Summary: chunked or single
+    needsChunking
+      ? summariseChunks(chunks, basePromptInput)
+      : callWithRetry<Summary>(buildSummaryPrompt(basePromptInput), SummarySchema, "summary"),
+
+    // Action items always run on the full transcript (needs global context)
+    callWithRetry<ActionItems>(actionPrompt, ActionItemsSchema, "action-items"),
+  ]);
+
+  // ── Step 4: Map owner names → user IDs ───────────────────────────────────
+  const ownerNames = rawActionItems.map((item: ActionItem) => item.owner_name);
+  const ownerMap = resolveOwners(ownerNames, participants);
+
+  // ── Step 5: Verify source quotes ──────────────────────────────────────────
+  let droppedItems = 0;
+  const action_items: EnrichedActionItem[] = [];
+
+  for (let i = 0; i < rawActionItems.length; i++) {
+    const item = rawActionItems[i];
+    const { found: quote_verified, tMs, confidence } = quoteExistsInTranscript(
+      item.source_quote,
+      segments,
+    );
+
+    if (!quote_verified) {
+      droppedItems++;
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          `[pipeline] dropping action item "${item.title}" — ` +
+            `quote not found in transcript (confidence=${confidence.toFixed(2)})`,
+        );
+      }
+      continue;
+    }
+
+    action_items.push({
+      ...item,
+      // Correct timestamp_ms to the verified segment's t_ms when available
+      timestamp_ms: tMs ?? item.timestamp_ms,
+      owner_id: ownerMap.get(item.owner_name) ?? null,
+      quote_verified,
+      quote_confidence: confidence,
+    });
+  }
+
+  const elapsedMs = Date.now() - startMs;
+
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      `[pipeline] done in ${elapsedMs}ms — ` +
+        `${action_items.length} items kept, ${droppedItems} dropped`,
+    );
   }
 
   return {
-    summary: {
-      tldr,
-      key_points: keyPoints,
-      decisions,
-      open_questions: openQuestions,
+    summary,
+    action_items,
+    meta: {
+      segmentCount: segments.length,
+      wordCount,
+      chunked: needsChunking,
+      chunkCount: chunks.length,
+      droppedItems,
+      elapsedMs,
     },
-    actionItems,
   };
 }
