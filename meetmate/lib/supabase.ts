@@ -35,7 +35,6 @@ export function createBrowserClient() {
     console.warn(
       "[MeetMate] Supabase env vars not set. Copy .env.local.example → .env.local"
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return stub as any;
   }
   return _browser(SUPABASE_URL, SUPABASE_ANON);
@@ -51,7 +50,6 @@ export async function createServerClient() {
         getUser: async () => ({ data: { user: null }, error: null }),
         getSession: async () => ({ data: { session: null }, error: null }),
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
   }
 
