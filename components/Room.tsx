@@ -442,14 +442,9 @@ export default function Room({
     let cancelled = false;
     async function prepare() {
       try {
-<<<<<<< HEAD
         const search = typeof window !== "undefined" ? window.location.search : "";
         const localName = new URLSearchParams(search).get("name") ?? undefined;
         const queryUserId = new URLSearchParams(search).get("userId") ?? undefined;
-=======
-        const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
-        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
->>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
 
         const user = await getMeetingUser(localName, effectiveUserId);
@@ -471,21 +466,14 @@ export default function Room({
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
 
-<<<<<<< HEAD
-        // Resolve user ID: explicit prop -> query param -> auth session -> host fallback
-=======
         // Resolve user ID: explicit prop -> query param -> auth session -> host fallback -> demo fallback
->>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
           meeting.host_id ||
           "user-priya-01";
         setUserId(resolvedUserId);
-<<<<<<< HEAD
 
-=======
->>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
