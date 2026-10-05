@@ -285,26 +285,26 @@ export default function Room({ code, meetingId, hostId, userId: suppliedUserId, 
     if (!consented || joining) return;
     setJoining(true);
     setJoinError(null);
-    if (meetingId && userId) {
-      try {
-        const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/consent`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId }),
-        });
-        if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
-      } catch (cause) {
-        if (process.env.NODE_ENV === "production") {
-          setJoining(false);
-          setJoinError(cause instanceof Error ? cause.message : "Consent could not be recorded. Try again.");
-          return;
-        }
-        handleNotice({ kind: "info", message: "Local demo: consent API is unavailable; continuing without server logging." });
-      }
-    } else if (process.env.NODE_ENV === "production") {
+    if (!meetingId || !userId) {
       setJoining(false);
       setJoinError("Meeting metadata is missing. Ask P1 to include meetingId and userId in the meeting URL.");
       return;
+    }
+
+    try {
+      const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/consent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
+    } catch (cause) {
+      if (process.env.NODE_ENV === "production") {
+        setJoining(false);
+        setJoinError(cause instanceof Error ? cause.message : "Consent could not be recorded. Try again.");
+        return;
+      }
+      handleNotice({ kind: "info", message: "Local demo: consent API is unavailable; continuing without server logging." });
     }
 
     const parsedStart = suppliedStartedAt ? Date.parse(suppliedStartedAt) : Number.NaN;
