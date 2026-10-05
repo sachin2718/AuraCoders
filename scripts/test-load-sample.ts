@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { POST } from "../app/api/meetings/[id]/load-sample/route";
-import { getMeetingDetails, resetMockStore, createMeeting } from "../lib/db";
+import { getMeetingDetails, getTodosForUser, resetMockStore, createMeeting } from "../lib/db";
 import { MEETING_ID, FIXTURE_ACTION_ITEMS } from "../lib/mock-data";
 
 async function runTests() {
@@ -38,7 +38,16 @@ async function runTests() {
   if (!meetingDetails1.summary?.tldr) {
     throw new Error("Expected summary to be stored");
   }
+  const priyaTodos = await getTodosForUser("user-priya-01");
+  if (priyaTodos.length === 0) {
+    throw new Error("Expected sample action items to be visible to the signed-in Priya demo user");
+  }
+  const arjunTodos = await getTodosForUser("user-arjun-02");
+  if (arjunTodos.length === 0) {
+    throw new Error("Expected sample action items to be visible to the signed-in Arjun demo user");
+  }
   console.log("✓ Test 1 verified: Meeting status is ready and fixtures persisted in store.");
+  console.log("✓ Sample action items are assigned to signed-in demo users.");
 
   // Test 2: 404 for non-existent meeting
   console.log("\n[Test 2] Load sample on non-existent meeting (expect 404)...");

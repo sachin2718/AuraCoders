@@ -19,6 +19,7 @@
  */
 
 import { createMeeting, setStatus, getMeetingData } from "../lib/db";
+import { isMockMode } from "../lib/auth";
 import { POST } from "../app/api/livekit-token/route";
 import { NextRequest } from "next/server";
 
@@ -54,8 +55,9 @@ async function runTest() {
     throw new Error(`Expected status 401 for unauthenticated request, got ${resUnauth.status}`);
   }
 
-  // Test 2: Non-existent meeting code (expect 404)
-  console.log("\n[Test 2] Testing non-existent meeting code (expect 404)...");
+  // Test 2: Unknown codes remain joinable only in local mock mode.
+  const unknownCodeStatus = isMockMode() ? 200 : 404;
+  console.log(`\n[Test 2] Testing unknown meeting code (expect ${unknownCodeStatus} in this mode)...`);
   const reqNotFound = new NextRequest("http://localhost:3000/api/livekit-token", {
     method: "POST",
     headers: {
@@ -65,9 +67,9 @@ async function runTest() {
     body: JSON.stringify({ code: "NONEXIST", displayName: "Priya" }),
   });
   const resNotFound = await POST(reqNotFound);
-  console.log(`✓ Not found response status: ${resNotFound.status}`);
-  if (resNotFound.status !== 404) {
-    throw new Error(`Expected status 404 for non-existent meeting, got ${resNotFound.status}`);
+  console.log(`✓ Unknown-code response status: ${resNotFound.status}`);
+  if (resNotFound.status !== unknownCodeStatus) {
+    throw new Error(`Expected status ${unknownCodeStatus} for this mode, got ${resNotFound.status}`);
   }
 
   // Test 3: Meeting with status != live (expect 409)
@@ -108,7 +110,7 @@ async function runTest() {
   const data = await resValid.json();
   console.log(`✓ Response received:`);
   console.log(`  - URL: ${data.url}`);
-  console.log(`  - Token: ${data.token.slice(0, 30)}... (${data.token.length} chars)`);
+  console.log(`  - Token: [redacted] (${data.token.length} chars)`);
 
   if (!data.token || typeof data.token !== "string") {
     throw new Error("Missing or invalid token in response");
