@@ -13,6 +13,7 @@ type LobbyProps = {
   onConsentChange: (consented: boolean) => void;
   onJoin: () => void;
   onLeave: () => void;
+  onStreamReady?: (stream: MediaStream) => void;
 };
 
 export default function Lobby({
@@ -25,6 +26,7 @@ export default function Lobby({
   onConsentChange,
   onJoin,
   onLeave,
+  onStreamReady,
 }: LobbyProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -48,7 +50,11 @@ export default function Lobby({
         }
         streamRef.current = stream;
         setHasPreview(true);
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        onStreamReady?.(stream);
       })
       .catch((error: unknown) => {
         const denied = error instanceof Error && /NotAllowed|PermissionDenied/i.test(`${error.name} ${error.message}`);
@@ -59,9 +65,11 @@ export default function Lobby({
 
     return () => {
       active = false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (!onStreamReady) {
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+      }
     };
-  }, []);
+  }, [onStreamReady]);
 
   useEffect(() => {
     streamRef.current?.getVideoTracks().forEach((track) => { track.enabled = cameraOn; });

@@ -68,87 +68,185 @@ function LocalCameraStage({
   cameraOn,
   micOn,
   streamRef,
+  sharedStream,
 }: {
   displayName: string;
   cameraOn: boolean;
   micOn: boolean;
   streamRef: React.MutableRefObject<MediaStream | null>;
+  sharedStream?: MediaStream | null;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [stream, setStream] = useState<MediaStream | null>(sharedStream || streamRef.current);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  // Directly attach stream and play
+  const bindStream = useCallback((video: HTMLVideoElement | null, mediaStream: MediaStream | null) => {
+    if (!video || !mediaStream) return;
+    if (video.srcObject !== mediaStream) {
+      video.srcObject = mediaStream;
+    }
+    video.play().catch(() => {});
+  }, []);
+
+  const initCamera = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Webcam not supported in this browser");
+      setError("Webcam not supported in this browser.");
       return;
     }
 
-    navigator.mediaDevices
-      .getUserMedia({ video: true, audio: true })
-      .then((stream) => {
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+    setRetrying(true);
+    setError(null);
+
+    // Try up to 3 times to allow Windows camera sensor to release from previous preview
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        let mediaStream: MediaStream;
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: true,
+          });
+        } catch {
+          // Fallback to video-only if audio exclusivity mode blocks it
+          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
         }
-        streamRef.current = stream;
+
+        streamRef.current = mediaStream;
+        setStream(mediaStream);
+        setError(null);
+        setRetrying(false);
+
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
+          bindStream(videoRef.current, mediaStream);
         }
-      })
-      .catch((err) => {
-        setError("Camera/mic access unavailable: " + (err instanceof Error ? err.message : String(err)));
-      });
-
-    return () => {
-      active = false;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    };
-  }, [streamRef]);
+        return;
+      } catch (err) {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 400));
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(
+            msg.includes("Permission") || msg.includes("NotAllowed")
+              ? "Camera permission denied. Allow camera access in your browser."
+              : `Camera unavailable (${msg}). Click retry below.`
+          );
+        }
+      }
+    }
+    setRetrying(false);
+  }, [bindStream, streamRef]);
 
   useEffect(() => {
-    streamRef.current?.getVideoTracks().forEach((t) => {
-      t.enabled = cameraOn;
-    });
-  }, [cameraOn, streamRef]);
+    // If sharedStream is available from Lobby, adopt it immediately
+    if (sharedStream && sharedStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      streamRef.current = sharedStream;
+      setStream(sharedStream);
+      if (videoRef.current) {
+        bindStream(videoRef.current, sharedStream);
+      }
+      return;
+    }
 
+    // If streamRef already has an active stream
+    if (streamRef.current && streamRef.current.getVideoTracks().some((t) => t.readyState === "live")) {
+      setStream(streamRef.current);
+      if (videoRef.current) {
+        bindStream(videoRef.current, streamRef.current);
+      }
+      return;
+    }
+
+    void initCamera();
+  }, [bindStream, initCamera, sharedStream, streamRef]);
+
+  // Sync camera track enabled state
   useEffect(() => {
-    streamRef.current?.getAudioTracks().forEach((t) => {
-      t.enabled = micOn;
+    const s = stream || streamRef.current;
+    s?.getVideoTracks().forEach((track) => {
+      track.enabled = cameraOn;
     });
-  }, [micOn, streamRef]);
+  }, [cameraOn, stream, streamRef]);
+
+  // Sync audio track enabled state
+  useEffect(() => {
+    const s = stream || streamRef.current;
+    s?.getAudioTracks().forEach((track) => {
+      track.enabled = micOn;
+    });
+  }, [micOn, stream, streamRef]);
+
+  // Callback ref for <video> ensures srcObject is bound immediately on mount/remount
+  const handleVideoRef = useCallback(
+    (node: HTMLVideoElement | null) => {
+      videoRef.current = node;
+      const s = stream || streamRef.current;
+      if (node && s) {
+        bindStream(node, s);
+      }
+    },
+    [bindStream, stream, streamRef]
+  );
 
   return (
     <div className="relative flex h-full min-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
-      {cameraOn ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="h-full w-full object-cover -scale-x-100"
-        />
-      ) : (
-        <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-800 text-3xl font-semibold text-slate-200">
-            {displayName.slice(0, 2).toUpperCase()}
-          </div>
-          <span className="text-sm font-medium">{displayName} (Camera Off)</span>
-        </div>
-      )}
+      {/* Video element is kept in the DOM to avoid re-initializing video decoding */}
+      <video
+        ref={handleVideoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`h-full w-full object-cover -scale-x-100 transition-opacity duration-300 ${
+          cameraOn && stream ? "opacity-100" : "opacity-0 absolute pointer-events-none"
+        }`}
+      />
 
-      {error && !cameraOn && (
-        <div className="absolute top-4 left-4 rounded bg-red-900/80 px-3 py-1.5 text-xs text-red-200">
-          {error}
+      {/* Fallback View when camera is turned off or loading */}
+      {(!cameraOn || !stream) && (
+        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-300">
+          <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-3xl font-bold text-slate-100 shadow-xl">
+            {displayName.slice(0, 2).toUpperCase()}
+            {cameraOn && !stream && (
+              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs">
+                📷
+              </span>
+            )}
+          </div>
+          <span className="text-base font-semibold">{displayName}</span>
+          <span className="text-xs text-slate-400">
+            {!cameraOn
+              ? "Camera is turned off"
+              : error
+              ? error
+              : retrying
+              ? "Connecting camera…"
+              : "Camera initializing…"}
+          </span>
+
+          {error && (
+            <button
+              type="button"
+              onClick={() => void initCamera()}
+              disabled={retrying}
+              className="mt-2 rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {retrying ? "Retrying…" : "Retry Camera"}
+            </button>
+          )}
         </div>
       )}
 
       {/* Participant info badge */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10">
         <span className="text-xs font-medium text-white">{displayName} (You)</span>
-        {!micOn && <span className="text-xs text-red-400">🔇 Muted</span>}
-        <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Live Video" />
+        {!micOn && <span className="text-xs text-red-400 font-semibold">🔇 Muted</span>}
+        {cameraOn && stream && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </span>
+        )}
       </div>
     </div>
   );
@@ -163,6 +261,7 @@ function InCall({
   userId,
   startedAt,
   isMockLiveKit,
+  sharedStream,
   onNotice,
   onMeetingEnded,
   onLeave,
@@ -175,11 +274,12 @@ function InCall({
   userId: string | null;
   startedAt: number;
   isMockLiveKit: boolean;
+  sharedStream?: MediaStream | null;
   onNotice: (notice: Notice) => void;
   onMeetingEnded: () => void;
   onLeave: () => void;
 }) {
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(sharedStream || null);
   const [localCamOn, setLocalCamOn] = useState(true);
   const [localMicOn, setLocalMicOn] = useState(true);
 
@@ -449,6 +549,7 @@ function InCall({
               cameraOn={localCamOn}
               micOn={localMicOn}
               streamRef={localStreamRef}
+              sharedStream={sharedStream}
             />
           )}
         </div>
@@ -550,6 +651,7 @@ export default function Room({
   const [joined, setJoined] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
+  const [lobbyStream, setLobbyStream] = useState<MediaStream | null>(null);
 
   const handleNotice = useCallback((nextNotice: Notice) => {
     setNotice(nextNotice);
@@ -672,6 +774,7 @@ export default function Room({
           onConsentChange={setConsented}
           onJoin={() => void joinMeeting()}
           onLeave={leaveLobby}
+          onStreamReady={setLobbyStream}
         />
         <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
       </>
@@ -725,6 +828,7 @@ export default function Room({
             userId={userId}
             startedAt={sessionStartedAt}
             isMockLiveKit={isMockLiveKit}
+            sharedStream={lobbyStream}
             onNotice={handleNotice}
             onMeetingEnded={navigateToSummary}
             onLeave={() => router.push("/dashboard")}
