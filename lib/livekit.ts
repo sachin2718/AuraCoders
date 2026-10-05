@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 export type LiveKitCredentials = { token: string; url: string };
+export type MeetingUser = { id: string | null; displayName: string };
 
 function getSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,8 +13,15 @@ function getSupabaseClient() {
 }
 
 export async function getSignedInDisplayName(localName?: string): Promise<string> {
+  return (await getMeetingUser(localName)).displayName;
+}
+
+export async function getMeetingUser(localName?: string, suppliedUserId?: string): Promise<MeetingUser> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-    return localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`;
+    return {
+      id: suppliedUserId?.trim() || null,
+      displayName: localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`,
+    };
   }
 
   const { data: { user }, error } = await getSupabaseClient().auth.getUser();
@@ -25,10 +33,19 @@ export async function getSignedInDisplayName(localName?: string): Promise<string
     ? metadataName.trim()
     : user.email?.trim();
   if (!displayName) throw new Error("Your signed-in account has no display name.");
-  return displayName;
+  return { id: user.id, displayName };
 }
 
 export async function getLiveKitCredentials(code: string, displayName: string): Promise<LiveKitCredentials> {
+  const developmentToken = getDevelopmentTokenOverride();
+  const developmentUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+  if (developmentToken) {
+    if (!developmentUrl) {
+      throw new Error("Set NEXT_PUBLIC_LIVEKIT_URL to use the development ?token= override.");
+    }
+    return { token: developmentToken, url: developmentUrl };
+  }
+
   const response = await fetch("/api/livekit-token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -68,6 +85,22 @@ export async function getLiveKitCredentials(code: string, displayName: string): 
   }
 
   return { token: tokens[tokenIndex], url };
+}
+
+function getDevelopmentTokenOverride(): string | null {
+  if (process.env.NODE_ENV === "production") return null;
+
+  const currentUrl = new URL(window.location.href);
+  const token = currentUrl.searchParams.get("token")?.trim();
+  if (!token) return null;
+
+  currentUrl.searchParams.delete("token");
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`,
+  );
+  return token;
 }
 
 function parseDevelopmentTokens(value: string): string[] {
