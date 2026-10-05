@@ -37,6 +37,22 @@ export async function getLiveKitCredentials(code: string, displayName: string): 
     return { token: developmentToken, url: developmentUrl };
   }
 
+  // A public dev token is useful for local LiveKit testing when the server
+  // token route has not been configured yet. Never use this path in a
+  // production build; server-signed tokens are required there.
+  if (process.env.NODE_ENV !== "production") {
+    const configuredDevToken = process.env.NEXT_PUBLIC_DEV_LIVEKIT_TOKEN;
+    if (configuredDevToken && developmentUrl && !configuredDevToken.startsWith("mock-")) {
+      const tokens = parseDevelopmentTokens(configuredDevToken);
+      const requestedIndex = new URLSearchParams(window.location.search).get("devTokenIndex");
+      const tokenIndex = requestedIndex === null ? 0 : Number(requestedIndex);
+      if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex >= tokens.length) {
+        throw new Error(`devTokenIndex must be an integer from 0 to ${tokens.length - 1}.`);
+      }
+      return { token: tokens[tokenIndex], url: developmentUrl };
+    }
+  }
+
   const response = await fetch("/api/livekit-token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

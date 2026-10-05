@@ -261,6 +261,28 @@ function InCall({
     }
   };
 
+  useEffect(() => {
+    if (isMockLiveKit) return;
+
+    const syncScreenShareState = () => {
+      const publication = localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      setScreenShareEnabled(Boolean(publication?.track && !publication.isMuted));
+    };
+
+    room.on(RoomEvent.LocalTrackPublished, syncScreenShareState);
+    room.on(RoomEvent.LocalTrackUnpublished, syncScreenShareState);
+    room.on(RoomEvent.TrackMuted, syncScreenShareState);
+    room.on(RoomEvent.TrackUnmuted, syncScreenShareState);
+    syncScreenShareState();
+
+    return () => {
+      room.off(RoomEvent.LocalTrackPublished, syncScreenShareState);
+      room.off(RoomEvent.LocalTrackUnpublished, syncScreenShareState);
+      room.off(RoomEvent.TrackMuted, syncScreenShareState);
+      room.off(RoomEvent.TrackUnmuted, syncScreenShareState);
+    };
+  }, [isMockLiveKit, localParticipant, room]);
+
   /**
    * Explicitly releases camera, microphone, screen share, and LiveKit tracks
    * ensuring the browser's hardware recording light turns off immediately.
@@ -713,6 +735,10 @@ export default function Room({
         connect={!isMockLiveKit}
         audio={!isMockLiveKit}
         video={!isMockLiveKit}
+        options={{ adaptiveStream: true, dynacast: true }}
+        onConnected={() => {
+          if (!isMockLiveKit) handleNotice({ kind: "info", message: "Connected to LiveKit." });
+        }}
         onError={(cause) => {
           if (isMockLiveKit) return;
           handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") });
