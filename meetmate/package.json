@@ -7,6 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "tsx scripts/test-api-routes.ts && tsx scripts/test-end-route.ts && tsx scripts/test-cross-user-todos.ts && tsx scripts/test-load-sample.ts",
+    "test:api": "tsx scripts/test-api-routes.ts",
+    "test:end": "tsx scripts/test-end-route.ts",
+    "test:todos": "tsx scripts/test-cross-user-todos.ts",
+    "test:sample": "tsx scripts/test-load-sample.ts",
     "test:db": "tsx scripts/test-db.ts"
   },
   "dependencies": {

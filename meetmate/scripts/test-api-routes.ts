@@ -10,7 +10,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { POST as createMeetingRoute, GET as listMeetingsRoute } from "../app/api/meetings/route";
+import { POST as createMeetingRoute } from "../app/api/meetings/route";
 import { GET as getMeetingRoute } from "../app/api/meetings/[id]/route";
 import { POST as consentRoute } from "../app/api/meetings/[id]/consent/route";
 import { POST as transcriptRoute } from "../app/api/transcript/route";

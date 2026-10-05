@@ -1,26 +1,36 @@
 /**
- * GET /api/todos/me — return action items for the currently authenticated user
- * Stub: reads ?userId= query param (real version uses Supabase Auth session).
- * Returns action_item rows joined with meeting_title.
+ * GET /api/todos/me — Return action items for the currently authenticated user
+ *
+ * RULES:
+ * - Requires a signed-in user (401 otherwise).
+ * - Returns only action_items where owner_id = current user.
+ * - Joined with the meeting title.
+ * - Ordered by due_date nulls last.
+ * - No stack traces in responses, no secrets in logs.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { todosStore } from "@/lib/mock-data";
+import { getAuthUser } from "@/lib/auth";
+import { getTodosForUser } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+  try {
+    // 1. Require signed-in user
+    const user = await getAuthUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized: signed-in user required" },
+        { status: 401 }
+      );
+    }
 
-  // Stub auth: accept ?userId= param; real impl reads from Supabase session cookie
-  const userId = searchParams.get("userId");
+    // 2. Fetch action items owned by user, joined with meeting title, ordered by due_date nulls last
+    const todos = await getTodosForUser(user.id);
 
-  if (!userId) {
-    // No userId → return all todos (useful for demo/admin view)
-    return NextResponse.json(todosStore);
+    return NextResponse.json(todos);
+  } catch (error) {
+    // Never leak internal stack traces or secrets to the client
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const myTodos = todosStore.filter(
-    (item) => item.owner_id === userId
-  );
-
-  return NextResponse.json(myTodos);
 }

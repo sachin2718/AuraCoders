@@ -18,7 +18,6 @@
  * 6. Verifies participant was upserted into DB.
  */
 
-import { TokenVerifier } from "livekit-server-sdk";
 import { createMeeting, setStatus, getMeetingData } from "../lib/db";
 import { POST } from "../app/api/livekit-token/route";
 import { NextRequest } from "next/server";
@@ -120,7 +119,7 @@ async function runTest() {
 
   // Test 5: Verify LiveKit JWT claims
   console.log("\n[Test 5] Verifying JWT claims...");
-  const [headerB64, payloadB64] = data.token.split(".");
+  const [, payloadB64] = data.token.split(".");
   const payload = JSON.parse(Buffer.from(payloadB64, "base64").toString("utf-8"));
   console.log(`✓ Decoded JWT Payload:`, {
     sub: payload.sub,
