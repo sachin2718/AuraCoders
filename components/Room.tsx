@@ -3,6 +3,7 @@
 import {
   ControlBar,
   GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -13,7 +14,7 @@ import {
 import { MediaDeviceFailure, RoomEvent, Track } from "livekit-client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PhoneOff, LogOut } from "lucide-react";
+import { PhoneOff, LogOut, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
@@ -62,6 +63,97 @@ function ConnectionNotices({ onNotice }: { onNotice: (notice: Notice) => void })
   return null;
 }
 
+function LocalCameraStage({
+  displayName,
+  cameraOn,
+  micOn,
+  streamRef,
+}: {
+  displayName: string;
+  cameraOn: boolean;
+  micOn: boolean;
+  streamRef: React.MutableRefObject<MediaStream | null>;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Webcam not supported in this browser");
+      return;
+    }
+
+    navigator.mediaDevices
+      .getUserMedia({ video: true, audio: true })
+      .then((stream) => {
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch((err) => {
+        setError("Camera/mic access unavailable: " + (err instanceof Error ? err.message : String(err)));
+      });
+
+    return () => {
+      active = false;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [streamRef]);
+
+  useEffect(() => {
+    streamRef.current?.getVideoTracks().forEach((t) => {
+      t.enabled = cameraOn;
+    });
+  }, [cameraOn, streamRef]);
+
+  useEffect(() => {
+    streamRef.current?.getAudioTracks().forEach((t) => {
+      t.enabled = micOn;
+    });
+  }, [micOn, streamRef]);
+
+  return (
+    <div className="relative flex h-full min-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
+      {cameraOn ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="h-full w-full object-cover -scale-x-100"
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center gap-3 text-slate-400">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-800 text-3xl font-semibold text-slate-200">
+            {displayName.slice(0, 2).toUpperCase()}
+          </div>
+          <span className="text-sm font-medium">{displayName} (Camera Off)</span>
+        </div>
+      )}
+
+      {error && !cameraOn && (
+        <div className="absolute top-4 left-4 rounded bg-red-900/80 px-3 py-1.5 text-xs text-red-200">
+          {error}
+        </div>
+      )}
+
+      {/* Participant info badge */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/60 px-3 py-1.5 backdrop-blur-sm">
+        <span className="text-xs font-medium text-white">{displayName} (You)</span>
+        {!micOn && <span className="text-xs text-red-400">🔇 Muted</span>}
+        <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" title="Live Video" />
+      </div>
+    </div>
+  );
+}
+
 function InCall({
   code,
   displayName,
@@ -70,6 +162,7 @@ function InCall({
   hostId,
   userId,
   startedAt,
+  isMockLiveKit,
   onNotice,
   onMeetingEnded,
   onLeave,
@@ -81,15 +174,20 @@ function InCall({
   hostId?: string;
   userId: string | null;
   startedAt: number;
+  isMockLiveKit: boolean;
   onNotice: (notice: Notice) => void;
   onMeetingEnded: () => void;
   onLeave: () => void;
 }) {
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const [localCamOn, setLocalCamOn] = useState(true);
+  const [localMicOn, setLocalMicOn] = useState(true);
+
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
   const tracks = useTracks([
-    { source: Track.Source.Camera, withPlaceholder: true },
-    { source: Track.Source.ScreenShare, withPlaceholder: true },
+    { source: Track.Source.Camera, withPlaceholder: false },
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
   const screenShareTracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -128,7 +226,7 @@ function InCall({
 
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
-  const speechEnabled = consented && isMicrophoneEnabled && !ending;
+  const speechEnabled = consented && (isMockLiveKit ? localMicOn : isMicrophoneEnabled) && !ending;
 
   /**
    * Explicitly releases camera, microphone, screen share, and LiveKit tracks
@@ -136,12 +234,11 @@ function InCall({
    */
   const releaseMedia = useCallback(async () => {
     try {
-      // 1. Mute and disable devices on local participant
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
       await localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
       await localParticipant.setCameraEnabled(false).catch(() => undefined);
       await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
-
-      // 2. Explicitly stop every publication track and underlying mediaStreamTrack
       localParticipant.trackPublications.forEach((publication) => {
         try {
           if (publication.track) {
@@ -150,17 +247,13 @@ function InCall({
               publication.track.mediaStreamTrack.stop();
             }
           }
-        } catch {
-          // ignore individual cleanup error
-        }
+        } catch {}
       });
-
-      // 3. Disconnect room and tell LiveKit to stop all remaining tracks
-      await room.disconnect(true).catch(() => undefined);
-    } catch {
-      // ignore
-    }
-  }, [localParticipant, room]);
+      if (!isMockLiveKit) {
+        await room.disconnect(true).catch(() => undefined);
+      }
+    } catch {}
+  }, [isMockLiveKit, localParticipant, room]);
 
   // Handle meeting ended event for participants and redirect to summary
   const handleEndMeetingForClient = useCallback(async () => {
@@ -286,6 +379,8 @@ function InCall({
 
   // Participant listener: Redirect when room disconnects with meeting status != live
   useEffect(() => {
+    if (isMockLiveKit) return; // Never show disconnect banner in mock/demo mode!
+
     const disconnected = () => {
       if (hasEndedRef.current || ending) return;
 
@@ -299,11 +394,7 @@ function InCall({
               onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
             }
           })
-          .catch(() => {
-            onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
-          });
-      } else {
-        onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
+          .catch(() => {});
       }
     };
 
@@ -311,7 +402,7 @@ function InCall({
     return () => {
       room.off(RoomEvent.Disconnected, disconnected);
     };
-  }, [ending, handleEndMeetingForClient, meetingId, onNotice, room]);
+  }, [ending, handleEndMeetingForClient, isMockLiveKit, meetingId, onNotice, room]);
 
   const handleLeave = async () => {
     await releaseMedia();
@@ -348,22 +439,56 @@ function InCall({
 
       <section className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-[#080d18]">
         <div className="flex-1 p-2">
-          <GridLayout tracks={tracks} className="h-full">
-            <ParticipantTile />
-          </GridLayout>
+          {!isMockLiveKit && tracks.length > 0 ? (
+            <GridLayout tracks={tracks} className="h-full">
+              <ParticipantTile />
+            </GridLayout>
+          ) : (
+            <LocalCameraStage
+              displayName={displayName}
+              cameraOn={localCamOn}
+              micOn={localMicOn}
+              streamRef={localStreamRef}
+            />
+          )}
         </div>
         <div aria-label="Meeting participants" className="flex flex-wrap items-center gap-3 border-t border-slate-700 px-3 py-2">
           <AssistantTile />
         </div>
         <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
-          <ControlBar
-            variation="verbose"
-            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
-            onDeviceError={({ source, error }) => onNotice({
-              kind: "error",
-              message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
-            })}
-          />
+          {isMockLiveKit ? (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLocalMicOn((m) => !m)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
+                }`}
+              >
+                {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}
+                <span>{localMicOn ? "Mute Mic" : "Unmute Mic"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocalCamOn((c) => !c)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
+                }`}
+              >
+                {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}
+                <span>{localCamOn ? "Stop Video" : "Start Video"}</span>
+              </button>
+            </div>
+          ) : (
+            <ControlBar
+              variation="verbose"
+              controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
+              onDeviceError={({ source, error }) => onNotice({
+                kind: "error",
+                message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
+              })}
+            />
+          )}
           {/* Host has End meeting in control bar; non-host has Leave */}
           {isHost ? (
             <button
@@ -553,6 +678,14 @@ export default function Room({
     );
   }
 
+  const isMockLiveKit = Boolean(
+    !credentials?.url ||
+    !credentials?.token ||
+    credentials.token.startsWith("mock-") ||
+    credentials.url.includes("meetmate-demo") ||
+    credentials.url.includes("your-project")
+  );
+
   return (
     <main className="min-h-screen bg-[#0b1020] text-white">
       <header className="flex min-h-[73px] flex-wrap items-center justify-between gap-2 border-b border-slate-800 px-4 py-3 sm:px-6">
@@ -564,32 +697,39 @@ export default function Room({
       </header>
       {notice && <div className={`fixed left-1/2 top-20 z-[100] max-w-[90vw] -translate-x-1/2 rounded-lg px-4 py-3 text-sm shadow-xl ${notice.kind === "error" ? "bg-red-800" : "bg-sky-800"}`} role="status" aria-live="polite">{notice.message}</div>}
       <LiveKitRoom
-        serverUrl={credentials.url}
-        token={credentials.token}
-        connect
-        audio
-        video
-        onError={(cause) => handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") })}
+        serverUrl={isMockLiveKit ? undefined : credentials.url}
+        token={isMockLiveKit ? undefined : credentials.token}
+        connect={!isMockLiveKit}
+        audio={!isMockLiveKit}
+        video={!isMockLiveKit}
+        onError={(cause) => {
+          if (isMockLiveKit) return;
+          handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") });
+        }}
         onMediaDeviceFailure={(failure, kind) => {
+          if (isMockLiveKit) return;
           const device = kind === "audioinput" ? "microphone" : "camera";
           handleNotice({ kind: "error", message: failure === MediaDeviceFailure.PermissionDenied
             ? `Allow ${device} access in your browser settings, then rejoin.`
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} />
-        <InCall
-          code={code}
-          displayName={displayName}
-          consented={consented}
-          meetingId={meetingId}
-          hostId={hostId}
-          userId={userId}
-          startedAt={sessionStartedAt}
-          onNotice={handleNotice}
-          onMeetingEnded={navigateToSummary}
-          onLeave={() => router.push("/dashboard")}
-        />
+        <LayoutContextProvider>
+          <ConnectionNotices onNotice={handleNotice} />
+          <InCall
+            code={code}
+            displayName={displayName}
+            consented={consented}
+            meetingId={meetingId}
+            hostId={hostId}
+            userId={userId}
+            startedAt={sessionStartedAt}
+            isMockLiveKit={isMockLiveKit}
+            onNotice={handleNotice}
+            onMeetingEnded={navigateToSummary}
+            onLeave={() => router.push("/dashboard")}
+          />
+        </LayoutContextProvider>
       </LiveKitRoom>
     </main>
   );
