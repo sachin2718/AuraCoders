@@ -94,7 +94,16 @@ export function useSpeech({ enabled, startedAt, lang = "en-US", onFinal }: UseSp
     return () => {
       stopped = true;
       if (restartTimer !== undefined) window.clearTimeout(restartTimer);
-      recognition?.stop();
+      try {
+        recognition?.abort();
+      } catch {
+        // ignore abort errors if already stopped
+      }
+      try {
+        recognition?.stop();
+      } catch {
+        // ignore stop errors
+      }
     };
   }, [enabled, lang, startedAt]);
 

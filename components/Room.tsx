@@ -13,6 +13,7 @@ import {
 import { MediaDeviceFailure, RoomEvent, Track } from "livekit-client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { PhoneOff, LogOut } from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
@@ -29,6 +30,7 @@ type RoomProps = {
   userId?: string;
   startedAt?: string;
 };
+
 type Notice = { kind: "error" | "info"; message: string };
 
 function permissionMessage(error: unknown): string | null {
@@ -40,34 +42,20 @@ function permissionMessage(error: unknown): string | null {
   return null;
 }
 
-function ConnectionNotices({ onNotice, onMeetingEnded }: {
-  onNotice: (notice: Notice) => void;
-  onMeetingEnded: () => void;
-}) {
+function ConnectionNotices({ onNotice }: { onNotice: (notice: Notice) => void }) {
   const room = useRoomContext();
 
   useEffect(() => {
     const reconnecting = () => onNotice({ kind: "info", message: "Connection interrupted. Reconnecting…" });
     const reconnected = () => onNotice({ kind: "info", message: "Reconnected to the meeting." });
-    const receiveData = (payload: Uint8Array, _participant?: unknown, _kind?: unknown, topic?: string) => {
-      if (topic !== "meetmate-control") return;
-      try {
-        const data = JSON.parse(new TextDecoder().decode(payload)) as { type?: string };
-        if (data.type === "meeting-ended") onMeetingEnded();
-      } catch {
-        // Ignore non-control data on this topic.
-      }
-    };
 
     room.on(RoomEvent.Reconnecting, reconnecting);
     room.on(RoomEvent.Reconnected, reconnected);
-    room.on(RoomEvent.DataReceived, receiveData);
     return () => {
       room.off(RoomEvent.Reconnecting, reconnecting);
       room.off(RoomEvent.Reconnected, reconnected);
-      room.off(RoomEvent.DataReceived, receiveData);
     };
-  }, [onMeetingEnded, onNotice, room]);
+  }, [onNotice, room]);
 
   return null;
 }
@@ -106,8 +94,63 @@ function InCall({
   const [savingTranscript, setSavingTranscript] = useState(false);
   const [localTranscriptLines, setLocalTranscriptLines] = useState<TranscriptLine[]>([]);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
-  const isHost = Boolean(meetingId && hostId && userId && hostId === userId);
+  const hasEndedRef = useRef(false);
+
+  // Host verification: Only the host (meeting.host_id === current user) is considered host
+  const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
   const speechEnabled = consented && isMicrophoneEnabled && !ending;
+
+  /**
+   * Explicitly releases camera, microphone, screen share, and LiveKit tracks
+   * ensuring the browser's hardware recording light turns off immediately.
+   */
+  const releaseMedia = useCallback(async () => {
+    try {
+      // 1. Mute and disable devices on local participant
+      await localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
+      await localParticipant.setCameraEnabled(false).catch(() => undefined);
+      await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
+
+      // 2. Explicitly stop every publication track and underlying mediaStreamTrack
+      localParticipant.trackPublications.forEach((publication) => {
+        try {
+          if (publication.track) {
+            publication.track.stop();
+            if (publication.track.mediaStreamTrack) {
+              publication.track.mediaStreamTrack.stop();
+            }
+          }
+        } catch {
+          // ignore individual cleanup error
+        }
+      });
+
+      // 3. Disconnect room and tell LiveKit to stop all remaining tracks
+      await room.disconnect(true).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+  }, [localParticipant, room]);
+
+  // Handle meeting ended event for participants and redirect to summary
+  const handleEndMeetingForClient = useCallback(async () => {
+    if (hasEndedRef.current) return;
+    hasEndedRef.current = true;
+    setEnding(true);
+
+    // Stop speech recognition and release mic/camera hardware
+    await releaseMedia();
+
+    // Redirect to summary page
+    onMeetingEnded();
+  }, [onMeetingEnded, releaseMedia]);
+
+  // Clean up media on unmount
+  useEffect(() => {
+    return () => {
+      void releaseMedia();
+    };
+  }, [releaseMedia]);
 
   const postTranscript = useCallback((text: string, tMs: number) => {
     if (!consented) return;
@@ -152,57 +195,123 @@ function InCall({
     onFinal: ({ text, tMs }) => postTranscript(text, tMs),
   });
 
+  // Host-only meeting termination handler
   const endMeeting = async () => {
-    if (!meetingId || !isHost || ending) return;
-    if (!window.confirm("End this meeting for everyone?")) return;
+    if (!meetingId || !isHost || ending || hasEndedRef.current) return;
+    if (!window.confirm("End this meeting for everyone? Live notes and action items will be generated.")) return;
+
+    hasEndedRef.current = true;
     setEnding(true);
     setEndError(null);
+
     try {
-      const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/end`, { method: "POST" });
+      // 1. Call POST /api/meetings/:id/end
+      const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/end`, {
+        method: "POST",
+      });
       if (!response.ok) {
         const detail = await response.text().catch(() => "");
         throw new Error(`End meeting failed (${response.status})${detail ? `: ${detail}` : ""}`);
       }
-      await localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "meeting-ended" })), {
+
+      // 2. Broadcast LiveKit data message {type:"meeting-ended"} to all participants
+      const payload = new TextEncoder().encode(JSON.stringify({ type: "meeting-ended" }));
+      await localParticipant.publishData(payload, {
         reliable: true,
         topic: "meetmate-control",
-      });
+      }).catch(() => undefined);
+
+      // 3. Stop speech recognition and release camera/mic
+      await releaseMedia();
+
+      // 4. Redirect host to summary page
       onMeetingEnded();
     } catch (error) {
+      hasEndedRef.current = false;
       setEnding(false);
       setEndError(error instanceof Error ? error.message : "Could not end this meeting.");
     }
   };
 
+  // Participant listener: Redirect when receiving {type:"meeting-ended"} broadcast by host
   useEffect(() => {
-    const disconnected = () => {
-      if (ending) return;
-      onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
-      if (meetingId) {
-        void fetch(`/api/meetings/${encodeURIComponent(meetingId)}`)
-          .then((response) => response.ok ? response.json() : null)
-          .then((data: { meeting?: { status?: string } } | null) => {
-            if (data?.meeting?.status && data.meeting.status !== "live") onMeetingEnded();
-          })
-          .catch(() => undefined);
+    const handleData = (payload: Uint8Array, _participant?: unknown, _kind?: unknown, topic?: string) => {
+      if (topic && topic !== "meetmate-control") return;
+      try {
+        const raw = new TextDecoder().decode(payload);
+        const data = JSON.parse(raw) as { type?: string };
+        if (data.type === "meeting-ended") {
+          void handleEndMeetingForClient();
+        }
+      } catch {
+        // Ignore non-control or malformed data
       }
     };
+
+    room.on(RoomEvent.DataReceived, handleData);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleData);
+    };
+  }, [handleEndMeetingForClient, room]);
+
+  // Participant listener: Redirect when room disconnects with meeting status != live
+  useEffect(() => {
+    const disconnected = () => {
+      if (hasEndedRef.current || ending) return;
+
+      if (meetingId) {
+        void fetch(`/api/meetings/${encodeURIComponent(meetingId)}`)
+          .then((response) => (response.ok ? response.json() : null))
+          .then((data: { meeting?: { status?: string } } | null) => {
+            if (data?.meeting?.status && data.meeting.status !== "live") {
+              void handleEndMeetingForClient();
+            } else {
+              onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
+            }
+          })
+          .catch(() => {
+            onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
+          });
+      } else {
+        onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
+      }
+    };
+
     room.on(RoomEvent.Disconnected, disconnected);
-    return () => { room.off(RoomEvent.Disconnected, disconnected); };
-  }, [ending, meetingId, onMeetingEnded, onNotice, room]);
+    return () => {
+      room.off(RoomEvent.Disconnected, disconnected);
+    };
+  }, [ending, handleEndMeetingForClient, meetingId, onNotice, room]);
+
+  const handleLeave = async () => {
+    await releaseMedia();
+    onLeave();
+  };
 
   return (
     <div className="grid min-h-[calc(100vh-73px)] grid-rows-[auto_1fr_auto] gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr_auto]">
       <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
         <div className="flex flex-wrap items-center gap-3">
-          <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100">
+          <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
             Assistant is active — AI-generated notes
           </p>
           <span className="text-xs text-slate-400">Room {code}</span>
         </div>
+
+        {/* Host-only "End meeting" button in top toolbar */}
         {isHost && (
-          <button type="button" disabled={ending} onClick={() => void endMeeting()} className="rounded-lg border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-200 hover:bg-red-500/15 disabled:opacity-50">
-            {ending ? "Ending…" : "End meeting"}
+          <button
+            type="button"
+            disabled={ending}
+            onClick={() => void endMeeting()}
+            className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 hover:border-red-500/60 disabled:opacity-50"
+          >
+            <PhoneOff className="h-4 w-4 text-red-400" />
+            <span>{ending ? "Ending meeting…" : "End meeting"}</span>
           </button>
         )}
       </div>
@@ -216,7 +325,7 @@ function InCall({
         <div aria-label="Meeting participants" className="flex flex-wrap items-center gap-3 border-t border-slate-700 px-3 py-2">
           <AssistantTile />
         </div>
-        <div className="flex justify-center border-t border-slate-700 bg-slate-900/80 p-3">
+        <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
           <ControlBar
             variation="verbose"
             controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
@@ -225,7 +334,27 @@ function InCall({
               message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
             })}
           />
-          <button type="button" onClick={onLeave} className="ml-2 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800">Leave</button>
+          {/* Host has End meeting in control bar; non-host has Leave */}
+          {isHost ? (
+            <button
+              type="button"
+              disabled={ending}
+              onClick={() => void endMeeting()}
+              className="ml-2 flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+            >
+              <PhoneOff className="h-4 w-4" />
+              <span>{ending ? "Ending…" : "End meeting"}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void handleLeave()}
+              className="ml-2 flex items-center gap-1.5 rounded-lg border border-slate-600 px-3.5 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Leave</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -244,7 +373,13 @@ function InCall({
   );
 }
 
-export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppliedHostId, userId: suppliedUserId, startedAt: suppliedStartedAt }: RoomProps) {
+export default function Room({
+  code,
+  meetingId: suppliedMeetingId,
+  hostId: suppliedHostId,
+  userId: suppliedUserId,
+  startedAt: suppliedStartedAt,
+}: RoomProps) {
   const router = useRouter();
   const [credentials, setCredentials] = useState<LiveKitCredentials | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -264,8 +399,13 @@ export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppl
     setNotice(nextNotice);
     window.setTimeout(() => setNotice((current) => current === nextNotice ? null : current), 5000);
   }, []);
+
   const navigateToSummary = useCallback(() => {
-    if (meetingId) router.replace(`/summary/${encodeURIComponent(meetingId)}`);
+    if (meetingId) {
+      router.replace(`/summary/${encodeURIComponent(meetingId)}`);
+    } else {
+      router.replace("/dashboard");
+    }
   }, [meetingId, router]);
 
   useEffect(() => {
@@ -273,13 +413,24 @@ export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppl
     async function prepare() {
       try {
         const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
-        const user = await getMeetingUser(localName, suppliedUserId);
+        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
+        const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
+
+        const user = await getMeetingUser(localName, effectiveUserId);
         const meeting = await api.findMeetingByCode(code);
         if (cancelled) return;
+
         setMeetingId(meeting.id);
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
-        setUserId(suppliedUserId?.trim() || user.id || (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null));
+
+        // Resolve user ID: explicit prop -> query param -> auth session -> mock fallback
+        const resolvedUserId =
+          effectiveUserId ||
+          user.id ||
+          (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null);
+        setUserId(resolvedUserId);
+
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
@@ -379,7 +530,7 @@ export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppl
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} onMeetingEnded={navigateToSummary} />
+        <ConnectionNotices onNotice={handleNotice} />
         <InCall
           code={code}
           displayName={displayName}
