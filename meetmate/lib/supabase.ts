@@ -4,53 +4,55 @@
  * - Browser client: uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
  * - Server client: uses SUPABASE_SERVICE_ROLE_KEY (never exposed to browser bundles)
  *
- * SECURITY CONSTRAINTS:
- * - Server client must NEVER be called or instantiated in browser/client components.
- * - API keys must NEVER be logged or leaked into client bundles or console output.
+ * Exports helpers:
+ * - createBrowserClient() for Client Components
+ * - createServerClient() for Server Components / Route Handlers
+ * - getSupabaseServerClient() for service-role server operations
  */
 
+import { createBrowserClient as _browser } from "@supabase/ssr";
+import {
+  createServerClient as _server,
+  type CookieOptions,
+} from "@supabase/ssr";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-// Cached client singletons
 let cachedBrowserClient: SupabaseClient | null = null;
 let cachedServerClient: SupabaseClient | null = null;
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Returns true if real Supabase environment variables are configured.
  * Never logs keys or secrets.
  */
 export function isSupabaseConfigured(): boolean {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || (!serviceKey && !anonKey)) return false;
-  if (url.includes("your-project.supabase.co")) return false;
+  if (!SUPABASE_URL || (!serviceKey && !SUPABASE_ANON)) return false;
+  if (SUPABASE_URL.includes("your-project.supabase.co")) return false;
   if (serviceKey && serviceKey.includes("your_supabase_service_role_key")) return false;
-  if (anonKey && anonKey.includes("your_supabase_anon_key")) return false;
+  if (SUPABASE_ANON && SUPABASE_ANON.includes("your_supabase_anon_key")) return false;
 
   return true;
 }
 
 /**
  * Browser-safe Supabase client using public anon key.
- * Can be safely called in browser components.
  */
 export function getSupabaseBrowserClient(): SupabaseClient {
   if (cachedBrowserClient) {
     return cachedBrowserClient;
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
     throw new Error(
       "Supabase browser client error: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing."
     );
   }
 
-  cachedBrowserClient = createClient(supabaseUrl, supabaseAnonKey, {
+  cachedBrowserClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
@@ -63,7 +65,6 @@ export function getSupabaseBrowserClient(): SupabaseClient {
 /**
  * Server-only Supabase client using SUPABASE_SERVICE_ROLE_KEY.
  * Bypasses Row Level Security (RLS) for server-side processing & DB operations.
- * Throws immediately if invoked in a browser environment.
  */
 export function getSupabaseServerClient(): SupabaseClient {
   if (typeof window !== "undefined") {
@@ -76,17 +77,15 @@ export function getSupabaseServerClient(): SupabaseClient {
     return cachedServerClient;
   }
 
-  const supabaseUrl =
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !serviceRoleKey) {
+  if (!SUPABASE_URL || !serviceRoleKey) {
     throw new Error(
       "Supabase server client error: SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing."
     );
   }
 
-  cachedServerClient = createClient(supabaseUrl, serviceRoleKey, {
+  cachedServerClient = createClient(SUPABASE_URL, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -96,9 +95,63 @@ export function getSupabaseServerClient(): SupabaseClient {
   return cachedServerClient;
 }
 
-/**
- * Convenient handles for browser and server clients
- */
+export function createBrowserClient() {
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    const stub = {
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        signInWithOtp: async () => ({ error: new Error("Supabase not configured — add .env.local") }),
+        signInWithPassword: async () => ({ error: new Error("Supabase not configured — add .env.local") }),
+        signUp: async () => ({ error: new Error("Supabase not configured — add .env.local") }),
+        signOut: async () => {},
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return stub as any;
+  }
+
+  return _browser(SUPABASE_URL, SUPABASE_ANON);
+}
+
+export async function createServerClient() {
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    return {
+      auth: {
+        getUser: async () => ({ data: { user: null }, error: null }),
+        getSession: async () => ({ data: { session: null }, error: null }),
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any;
+  }
+
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+
+  return _server(SUPABASE_URL, SUPABASE_ANON, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: CookieOptions) {
+        try {
+          cookieStore.set({ name, value, ...options });
+        } catch {
+          // set() throws in Server Components — safe to ignore here;
+          // middleware handles the actual cookie write.
+        }
+      },
+      remove(name: string, options: CookieOptions) {
+        try {
+          cookieStore.set({ name, value: "", ...options });
+        } catch {
+          // same as above
+        }
+      },
+    },
+  });
+}
+
 export const supabaseBrowser = {
   get client(): SupabaseClient {
     return getSupabaseBrowserClient();
