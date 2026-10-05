@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AccessToken } from "livekit-server-sdk";
 import { getAuthUser, isMockMode } from "@/lib/auth";
-import { getMeetingByCode, upsertParticipant } from "@/lib/db";
+import { createMeeting, getMeetingByCode, upsertParticipant } from "@/lib/db";
 
 const TokenRequestSchema = z.object({
   code: z.string().trim().min(1).max(100),
@@ -53,11 +53,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const meeting = await getMeetingByCode(code);
-    if (!meeting && !isMockMode() && process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    let meeting = await getMeetingByCode(code);
+    if (!meeting) {
+      meeting = await createMeeting({
+        title: `Meeting ${code.toUpperCase()}`,
+        hostId: user.id,
+      });
+      meeting.code = code.toUpperCase();
     }
-    if (meeting && meeting.status !== "live" && process.env.NODE_ENV === "production") {
+    if (meeting.status !== "live" && process.env.NODE_ENV === "production" && !isMockMode()) {
       return NextResponse.json({ error: "Meeting is not live" }, { status: 409 });
     }
 

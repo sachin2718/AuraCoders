@@ -89,9 +89,15 @@ export async function GET(req: NextRequest) {
   // Anyone with the code can find the meeting without requiring login.
   const code = req.nextUrl.searchParams.get("code")?.trim();
   if (code) {
-    const meeting = await getMeetingByCode(code);
+    let meeting = await getMeetingByCode(code);
     if (!meeting) {
-      return NextResponse.json({ error: "Meeting code was not found." }, { status: 404 });
+      // On serverless Vercel lambdas without Supabase, auto-create the meeting entry
+      // so any shared link/code connects instantly without 404
+      meeting = await createMeeting({
+        title: `Meeting ${code.toUpperCase()}`,
+        hostId: "host",
+      });
+      meeting.code = code.toUpperCase();
     }
     if (meeting.status !== "live") {
       return NextResponse.json({ error: "This meeting is no longer live." }, { status: 409 });
