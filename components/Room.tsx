@@ -582,63 +582,6 @@ function InCall({
         </div>
       </div>
 
-<<<<<<< HEAD
-      <section className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-[#080d18]">
-        <div className="flex-1 p-2">
-          {!isMockLiveKit && tracks.length > 0 ? (
-            <GridLayout tracks={tracks} className="h-full">
-              <ParticipantTile />
-            </GridLayout>
-          ) : (
-            <LocalCameraStage
-              displayName={displayName}
-              cameraOn={localCamOn}
-              micOn={localMicOn}
-              streamRef={localStreamRef}
-              sharedStream={sharedStream}
-            />
-          )}
-        </div>
-        <div aria-label="Meeting participants" className="flex flex-wrap items-center gap-3 border-t border-slate-700 px-3 py-2">
-          <AssistantTile />
-        </div>
-        <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
-          {isMockLiveKit ? (
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setLocalMicOn((m) => !m)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
-                }`}
-              >
-                {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}
-                <span>{localMicOn ? "Mute Mic" : "Unmute Mic"}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLocalCamOn((c) => !c)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-                  localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
-                }`}
-              >
-                {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}
-                <span>{localCamOn ? "Stop Video" : "Start Video"}</span>
-              </button>
-            </div>
-          ) : (
-            <ControlBar
-              variation="verbose"
-              controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
-              onDeviceError={({ source, error }) => onNotice({
-                kind: "error",
-                message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
-              })}
-            />
-          )}
-          {/* Host has End meeting in control bar; non-host has Leave */}
-          {isHost ? (
-=======
       <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
@@ -656,6 +599,7 @@ function InCall({
                 cameraOn={localCamOn}
                 micOn={localMicOn}
                 streamRef={localStreamRef}
+                sharedStream={sharedStream}
               />
             )}
           </div>
@@ -676,7 +620,6 @@ function InCall({
             ) : (
               <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
             )}
->>>>>>> 2e20f8daed6c1cc0ecdb5ce390921a46bbe818e5
             <button
               type="button"
               aria-pressed={captionsEnabled}
