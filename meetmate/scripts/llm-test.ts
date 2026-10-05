@@ -36,7 +36,7 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 // Force dev logging
-process.env.NODE_ENV = "development";
+(process.env as Record<string, string | undefined>).NODE_ENV = "development";
 
 
 
@@ -46,6 +46,13 @@ The value of msg should be a friendly greeting.`;
 
 async function main() {
   console.log("\n=== MeetMate LLM smoke-test ===\n");
+
+  if (!process.env.LLM_API_KEY) {
+    console.warn("⚠️  LLM_API_KEY is not set in .env.local or environment.");
+    console.warn("   To run live LLM smoke-tests, set LLM_API_KEY=<your-key> in .env.local.");
+    console.warn("   Skipping live API call smoke-test.\n");
+    return;
+  }
 
   // ── Call 1: live network hit ──
   console.log("▶ Call 1 (live)…");

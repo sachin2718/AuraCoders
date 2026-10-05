@@ -1,0 +1,34 @@
+{
+  "title": "Sprint Planning & AI Sync",
+  "participants": [
+    { "name": "Alice Chen" },
+    { "name": "Bob Sharma" },
+    { "name": "Carol Davis" },
+    { "name": "Dan Okonkwo" }
+  ],
+  "segments": [
+    { "speaker": "Alice Chen", "text": "Good morning everyone, let's do a quick standup. Bob, you want to start?", "tMs": 5000 },
+    { "speaker": "Bob Sharma", "text": "Sure. Yesterday I finished the database migration script and deployed it to staging. It's looking solid.", "tMs": 12000 },
+    { "speaker": "Bob Sharma", "text": "Today I'll be writing unit tests for the migration and then picking up the auth module story.", "tMs": 21000 },
+    { "speaker": "Bob Sharma", "text": "I'm blocked on getting the Supabase service role key from DevOps. Dan, can you send that over by end of day?", "tMs": 30000 },
+    { "speaker": "Dan Okonkwo", "text": "Absolutely, I'll send the Supabase service role key to you by 5 PM today.", "tMs": 38000 },
+    { "speaker": "Alice Chen", "text": "Great. Carol, your turn.", "tMs": 44000 },
+    { "speaker": "Carol Davis", "text": "Yesterday I completed the design mockups for the meeting room page. I shared them in Figma, please review when you can.", "tMs": 51000 },
+    { "speaker": "Carol Davis", "text": "Today I'm starting on the summary page design. I expect to have a first draft ready by EOD.", "tMs": 62000 },
+    { "speaker": "Carol Davis", "text": "No blockers on my end.", "tMs": 70000 },
+    { "speaker": "Alice Chen", "text": "Perfect. I'll review your Figma mockups this afternoon, Carol, and leave comments.", "tMs": 76000 },
+    { "speaker": "Alice Chen", "text": "Yesterday I had syncs with the client and stakeholders. They confirmed go-live is March 28th — that's our hard deadline, team.", "tMs": 84000 },
+    { "speaker": "Alice Chen", "text": "Today I'm drafting the deployment checklist and then reaching out to Vercel support about our bandwidth limit on the Hobby plan.", "tMs": 96000 },
+    { "speaker": "Bob Sharma", "text": "Quick question — do we need to write end-to-end tests before the March 28th go-live, or is that a stretch goal?", "tMs": 108000 },
+    { "speaker": "Alice Chen", "text": "Good question. Let's make end-to-end tests a hard requirement. Bob, can you own that along with Carol?", "tMs": 116000 },
+    { "speaker": "Bob Sharma", "text": "Yep, Carol and I will pair on end-to-end tests. We'll target having them done by March 25th.", "tMs": 124000 },
+    { "speaker": "Carol Davis", "text": "Agreed, March 25th works for me.", "tMs": 130000 },
+    { "speaker": "Dan Okonkwo", "text": "One more thing — I noticed the LiveKit token endpoint isn't rate-limited yet. We should add rate limiting before go-live.", "tMs": 138000 },
+    { "speaker": "Alice Chen", "text": "Good catch Dan. Dan, please add rate limiting to the LiveKit token endpoint by March 22nd.", "tMs": 146000 },
+    { "speaker": "Dan Okonkwo", "text": "Will do, I'll have rate limiting on the token endpoint done by March 22nd.", "tMs": 154000 },
+    { "speaker": "Alice Chen", "text": "Alright, anything else before we wrap? Any open questions?", "tMs": 162000 },
+    { "speaker": "Bob Sharma", "text": "Still not sure who handles load testing after the release. Should we loop in the DevOps team?", "tMs": 170000 },
+    { "speaker": "Alice Chen", "text": "Let's leave that as an open question for now and decide in Monday's planning session.", "tMs": 178000 },
+    { "speaker": "Alice Chen", "text": "Great standup everyone. Let's have a great day and hit that March 28th deadline!", "tMs": 185000 }
+  ]
+}

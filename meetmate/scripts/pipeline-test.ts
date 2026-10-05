@@ -31,12 +31,19 @@ function loadEnvLocal() {
 }
 
 loadEnvLocal();
-process.env.NODE_ENV = "development";
+(process.env as Record<string, string | undefined>).NODE_ENV = "development";
 
 
 
 async function main() {
   console.log("\n=== MeetMate Pipeline Acceptance Test ===\n");
+
+  if (!process.env.LLM_API_KEY) {
+    console.warn("⚠️  LLM_API_KEY is not set in .env.local or environment.");
+    console.warn("   To run the live pipeline test against Gemini, set LLM_API_KEY=<your-key> in .env.local.");
+    console.warn("   Skipping live pipeline acceptance test.\n");
+    return;
+  }
 
   const samplePath = resolve(process.cwd(), "samples/standup.json");
   const input: PipelineInput = JSON.parse(readFileSync(samplePath, "utf8"));

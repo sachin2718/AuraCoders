@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/* ── Design tokens: White, Brown, and Burgundy (No Gradients) ───────── */
+:root {
+  --background: #FAF8F5;   /* Warm off-white */
+  --foreground: #2A1B18;   /* Deep espresso brown */
+
+  /* Palette */
+  --burgundy: #722F37;
+  --burgundy-hover: #5A1827;
+  --burgundy-light: #FAF0F2;
+
+  --brown: #7A4B3A;
+  --brown-dark: #2C1810;
+  --brown-light: #EFE8E1;
+  --brown-border: #D7CCC8;
+
+  --white: #FFFFFF;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #18110E;  /* Deep rich brown-black */
+    --foreground: #F5EFEB;  /* Warm white text */
+    --brown-light: #2A1D18;
+    --brown-border: #3D2B24;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans, Arial, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Accessible Keyboard Focus Styles ──────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #722F37;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Subtle Scrollbar ──────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FAF8F5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D7CCC8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #BCAAA4;
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: #18110E;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3D2B24;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #523B33;
+  }
+}

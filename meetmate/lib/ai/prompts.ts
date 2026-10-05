@@ -142,16 +142,11 @@ Respond with the JSON object and nothing else.`.trim();
 export function buildActionPrompt(input: PromptInput): string {
   const anchor = resolveAnchorDate(input.meetingDate, input.timezone);
 
-  return `You are MeetMate, a professional meeting analyst specialising in task extraction.
-Your job is to extract every action item from a meeting transcript.
+  return `You extract action items from a meeting transcript.
 
-════════════════════════════════════════
-MEETING METADATA
-════════════════════════════════════════
-Date        : ${anchor}   ← use this as "today" when resolving relative dates
-Timezone    : ${input.timezone}
 Participants:
 ${formatParticipants(input.participantNames)}
+Meeting date: ${anchor} (${input.timezone})
 
 ════════════════════════════════════════
 TRANSCRIPT
@@ -163,45 +158,22 @@ VISUAL NOTES (whiteboard / screen captures)
 ════════════════════════════════════════
 ${formatVisualNotes(input.visualNotes)}
 
-════════════════════════════════════════
-RULES — follow every rule exactly
-════════════════════════════════════════
-1. Read the ENTIRE transcript before extracting anything.
-2. An action item is any commitment, task, follow-up, or deliverable that someone
-   agreed to do — explicitly or clearly implied.
-3. title: Start with an imperative verb. Max 12 words. Be specific (not "follow up").
-4. owner_name: Use the exact name from the transcript. Set to null ONLY if nobody is
-   assigned and it cannot reasonably be inferred. Do NOT invent names.
-5. due_date: Convert relative references ("by Friday", "next week", "end of month")
-   to absolute YYYY-MM-DD using the meeting date above as the anchor.
-   Set to null when no deadline is mentioned at all.
-6. priority:
-   - "high"   → blocking, urgent, or the speaker used words like "critical / ASAP / today"
-   - "medium" → normal business items with a stated deadline
-   - "low"    → nice-to-have, background tasks, no deadline mentioned
-7. source_quote: Copy the EXACT verbatim sentence(s) from the transcript that justify
-   this action item. Do not paraphrase. Include the speaker name prefix as it appears.
-8. timestamp_ms: Convert the [mm:ss] timestamp at the start of the source line to
-   milliseconds (mm*60000 + ss*1000).
-9. If the same task is mentioned multiple times, emit it ONCE using the most
-   informative occurrence as the source_quote.
-10. If there are NO action items, output an empty array [].
-11. Output ONLY the JSON array below — no markdown fences, no commentary.
+Return ONLY a JSON array. Each item:
+{
+  "title": string (imperative, <= 12 words),
+  "owner_name": string | null,
+  "due_date": "YYYY-MM-DD" | null,
+  "priority": "low" | "medium" | "high",
+  "source_quote": string (copied EXACTLY from the transcript, <= 25 words),
+  "timestamp_ms": number
+}
 
-════════════════════════════════════════
-REQUIRED JSON OUTPUT SCHEMA
-════════════════════════════════════════
-[
-  {
-    "title": "<imperative sentence, ≤12 words>",
-    "owner_name": "<string | null>",
-    "due_date": "<YYYY-MM-DD | null>",
-    "priority": "low" | "medium" | "high",
-    "source_quote": "<verbatim text from transcript>",
-    "timestamp_ms": <integer ≥ 0>
-  },
-  ...
-]
-
-Respond with the JSON array and nothing else.`.trim();
+Rules:
+- Only include real commitments or assignments. Do NOT turn opinions, decisions or discussion into tasks.
+- "Priya, can you ..." -> owner Priya. "I'll ..." / "Let me ..." -> owner = the speaker.
+- "Someone should ..." / unclear owner -> owner_name null.
+- Resolve relative dates ("by Friday", "next week") from the meeting date. Unknown -> null.
+- Priority: high if urgent/blocking/deadline within 2 days; low if "when you get a chance"; else medium.
+- Never invent tasks, owners, dates or quotes. If there are no action items, return [].
+- Output ONLY the JSON array — no markdown fences, no commentary.`.trim();
 }
