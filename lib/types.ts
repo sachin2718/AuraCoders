@@ -71,6 +71,7 @@ export const MeetingListItemSchema = z.object({
   title: z.string(),
   status: MeetingStatusSchema,
   started_at: z.string(),
+  host_id: z.string().nullable().optional(),
 });
 export type MeetingListItem = z.infer<typeof MeetingListItemSchema>;
 

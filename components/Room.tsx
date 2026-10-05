@@ -20,6 +20,7 @@ import Lobby from "./Lobby";
 import TranscriptPanel from "./TranscriptPanel";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
+import { api } from "../lib/api";
 
 type RoomProps = {
   code: string;
@@ -236,11 +237,13 @@ function InCall({
   );
 }
 
-export default function Room({ code, meetingId, hostId, userId: suppliedUserId, startedAt: suppliedStartedAt }: RoomProps) {
+export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppliedHostId, userId: suppliedUserId, startedAt: suppliedStartedAt }: RoomProps) {
   const router = useRouter();
   const [credentials, setCredentials] = useState<LiveKitCredentials | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [userId, setUserId] = useState<string | null>(suppliedUserId?.trim() || null);
+  const [meetingId, setMeetingId] = useState<string | undefined>(suppliedMeetingId);
+  const [hostId, setHostId] = useState<string | undefined>(suppliedHostId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -264,9 +267,12 @@ export default function Room({ code, meetingId, hostId, userId: suppliedUserId, 
       try {
         const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
         const user = await getMeetingUser(localName, suppliedUserId);
+        const meeting = await api.findMeetingByCode(code);
         if (cancelled) return;
+        setMeetingId(meeting.id);
+        setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
-        setUserId(suppliedUserId?.trim() || user.id);
+        setUserId(suppliedUserId?.trim() || user.id || (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null));
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
