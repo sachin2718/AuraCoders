@@ -17,7 +17,7 @@ import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
 import Lobby from "./Lobby";
-import TranscriptPanel from "./TranscriptPanel";
+import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
 import { api } from "../lib/api";
@@ -74,6 +74,8 @@ function ConnectionNotices({ onNotice, onMeetingEnded }: {
 
 function InCall({
   code,
+  displayName,
+  consented,
   meetingId,
   hostId,
   userId,
@@ -83,6 +85,8 @@ function InCall({
   onLeave,
 }: {
   code: string;
+  displayName: string;
+  consented: boolean;
   meetingId?: string;
   hostId?: string;
   userId: string | null;
@@ -100,12 +104,15 @@ function InCall({
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const [savingTranscript, setSavingTranscript] = useState(false);
+  const [localTranscriptLines, setLocalTranscriptLines] = useState<TranscriptLine[]>([]);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const isHost = Boolean(meetingId && hostId && userId && hostId === userId);
-  const speechEnabled = isMicrophoneEnabled && !ending;
+  const speechEnabled = consented && isMicrophoneEnabled && !ending;
 
   const postTranscript = useCallback((text: string, tMs: number) => {
-    const line = { speakerName: localParticipant.name || localParticipant.identity || "Participant", text, tMs };
+    if (!consented) return;
+    const line = { speakerName: displayName, text, tMs };
+    setLocalTranscriptLines((current) => [...current, line]);
     void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(line)), {
       reliable: true,
       topic: "transcript",
@@ -119,7 +126,7 @@ function InCall({
     setSavingTranscript(true);
     queueRef.current = queueRef.current.then(async () => {
       let lastError: unknown;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
         try {
           const response = await fetch("/api/transcript", {
             method: "POST",
@@ -130,14 +137,14 @@ function InCall({
           return;
         } catch (error) {
           lastError = error;
-          if (attempt < 2) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+          if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
         }
       }
       onNotice({ kind: "error", message: lastError instanceof Error
         ? `Could not save transcript: ${lastError.message}`
-        : "Could not save transcript after three attempts." });
+        : "Could not save transcript after three retries." });
     }).finally(() => setSavingTranscript(false));
-  }, [localParticipant, meetingId, onNotice]);
+  }, [consented, displayName, localParticipant, meetingId, onNotice]);
 
   const { supported, error: speechError } = useSpeech({
     enabled: speechEnabled,
@@ -223,7 +230,7 @@ function InCall({
       </section>
 
       <aside className="grid min-h-0 gap-4 lg:grid-rows-2">
-        <TranscriptPanel supported={supported} speechError={speechError} />
+        <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
         <ChatPanel />
       </aside>
 
@@ -375,6 +382,8 @@ export default function Room({ code, meetingId: suppliedMeetingId, hostId: suppl
         <ConnectionNotices onNotice={handleNotice} onMeetingEnded={navigateToSummary} />
         <InCall
           code={code}
+          displayName={displayName}
+          consented={consented}
           meetingId={meetingId}
           hostId={hostId}
           userId={userId}
