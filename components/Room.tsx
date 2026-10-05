@@ -536,17 +536,20 @@ export default function Room({
 
   if (!joined) {
     return (
-      <Lobby
-        code={code}
-        displayName={displayName}
-        consented={consented}
-        serverConsentAvailable={Boolean(meetingId && userId)}
-        joining={joining}
-        joinError={joinError}
-        onConsentChange={setConsented}
-        onJoin={() => void joinMeeting()}
-        onLeave={leaveLobby}
-      />
+      <>
+        <Lobby
+          code={code}
+          displayName={displayName}
+          consented={consented}
+          serverConsentAvailable={Boolean(meetingId && userId)}
+          joining={joining}
+          joinError={joinError}
+          onConsentChange={setConsented}
+          onJoin={() => void joinMeeting()}
+          onLeave={leaveLobby}
+        />
+        <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
+      </>
     );
   }
 
