@@ -55,12 +55,16 @@ const delay = (ms = 400): Promise<void> => {
 async function fetchClient<T>(
   endpoint: string,
   schema: z.ZodType<T>,
-  options?: RequestInit
+  options?: RequestInit,
+  timeoutMs = 20_000,
 ): Promise<T> {
   let response: Response;
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
   try {
     response = await fetch(endpoint, {
       ...options,
+      signal: options?.signal ?? timeoutController.signal,
       headers: {
         ...(options?.body instanceof FormData
           ? {}
@@ -69,8 +73,13 @@ async function fetchClient<T>(
       },
     });
   } catch (err: unknown) {
+    if (timeoutController.signal.aborted) {
+      throw new ApiError("The request timed out. Please try again.", 408);
+    }
     const message = err instanceof Error ? err.message : "Network request failed";
     throw new ApiError(`Network error: ${message}`, 0);
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!response.ok) {
