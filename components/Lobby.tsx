@@ -7,6 +7,7 @@ import ConsentBanner from "./ConsentBanner";
 type LobbyProps = {
   code: string;
   displayName: string;
+  onDisplayNameChange?: (name: string) => void;
   consented: boolean;
   serverConsentAvailable: boolean;
   joining: boolean;
@@ -21,6 +22,7 @@ type LobbyProps = {
 export default function Lobby({
   code,
   displayName,
+  onDisplayNameChange,
   consented,
   serverConsentAvailable,
   joining,
@@ -121,6 +123,21 @@ export default function Lobby({
           </div>
 
           <div className="flex flex-col gap-4">
+            <div>
+              <label htmlFor="display-name-input" className="block text-xs font-medium text-slate-300 mb-1.5">
+                Your Name
+              </label>
+              <input
+                id="display-name-input"
+                type="text"
+                value={displayName}
+                onChange={(e) => onDisplayNameChange?.(e.target.value)}
+                placeholder="Enter your name to join"
+                maxLength={50}
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-sm font-medium text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition"
+              />
+            </div>
+
             <ConsentBanner
               consented={consented}
               onConsentChange={onConsentChange}

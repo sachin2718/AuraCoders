@@ -400,60 +400,12 @@ function InCall({
   const [screenShareEnabled, setScreenShareEnabled] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
-  const [dbParticipants, setDbParticipants] = useState<Array<{ user_id: string; display_name: string }>>([]);
-  const [extraParticipants, setExtraParticipants] = useState<Array<{ id: string; name: string; isHost: boolean; micEnabled: boolean; cameraEnabled: boolean }>>([
-    { id: "demo-user-arjun", name: "Arjun Mehta", isHost: false, micEnabled: true, cameraEnabled: false },
-    { id: "demo-user-meera", name: "Meera Patel", isHost: false, micEnabled: false, cameraEnabled: false },
-  ]);
-  const [newParticipantName, setNewParticipantName] = useState("");
-
-  const addParticipant = (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const newP = {
-      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      name: trimmed,
-      isHost: false,
-      micEnabled: true,
-      cameraEnabled: false,
-    };
-    setExtraParticipants((prev) => [...prev, newP]);
-    onNotice({ kind: "info", message: `${trimmed} added to the meeting.` });
-  };
-
-  const removeParticipant = (id: string) => {
-    setExtraParticipants((prev) => prev.filter((p) => p.id !== id));
-  };
-
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
 
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
   const liveKitParticipants = useParticipants();
-
-  useEffect(() => {
-    if (!meetingId) return;
-    let active = true;
-
-    const loadParticipants = async () => {
-      try {
-        const details = await api.getMeeting(meetingId);
-        if (active && Array.isArray(details.participants)) {
-          setDbParticipants(details.participants);
-        }
-      } catch {
-        // non-critical
-      }
-    };
-
-    void loadParticipants();
-    const interval = setInterval(loadParticipants, 6000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [meetingId]);
 
   const displayParticipants = useMemo(() => {
     const list: Array<{
@@ -501,40 +453,8 @@ function InCall({
       });
     }
 
-    for (const dp of dbParticipants) {
-      if (!seenIds.has(dp.user_id) && dp.display_name.toLowerCase() !== displayName.toLowerCase()) {
-        seenIds.add(dp.user_id);
-        list.push({
-          id: dp.user_id,
-          name: dp.display_name,
-          isLocal: dp.user_id === userId,
-          isHost: Boolean(hostId && dp.user_id.trim() === hostId.trim()),
-          isSpeaking: false,
-          micEnabled: false,
-          cameraEnabled: false,
-          status: "registered",
-        });
-      }
-    }
-
-    for (const ep of extraParticipants) {
-      if (!seenIds.has(ep.id) && ep.name.toLowerCase() !== displayName.toLowerCase()) {
-        seenIds.add(ep.id);
-        list.push({
-          id: ep.id,
-          name: ep.name,
-          isLocal: false,
-          isHost: ep.isHost,
-          isSpeaking: false,
-          micEnabled: ep.micEnabled,
-          cameraEnabled: ep.cameraEnabled,
-          status: "active",
-        });
-      }
-    }
-
     return list;
-  }, [liveKitParticipants, hostId, displayName, userId, isHost, localMicOn, localCamOn, dbParticipants, extraParticipants]);
+  }, [liveKitParticipants, hostId, displayName, userId, isHost, localMicOn, localCamOn]);
 
   const totalParticipantCount = displayParticipants.length;
 
@@ -546,10 +466,13 @@ function InCall({
       setTimeout(() => setCopiedLink(false), 2000);
     }
   };
-  const tracks = useTracks([
-    { source: Track.Source.Camera, withPlaceholder: false },
-    { source: Track.Source.ScreenShare, withPlaceholder: false },
-  ]);
+  const tracks = useTracks(
+    [
+      { source: Track.Source.Camera, withPlaceholder: true },
+      { source: Track.Source.ScreenShare, withPlaceholder: false },
+    ],
+    { onlySubscribed: false }
+  );
   const screenShareTracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
@@ -847,57 +770,47 @@ function InCall({
                 <UsersRound className="h-4 w-4 text-indigo-300 group-hover:text-indigo-200 transition-colors" />
                 <span className="font-semibold text-white">Participants</span>
                 <span className="rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold">
-                  {totalParticipantCount} added
+                  {totalParticipantCount}
                 </span>
               </button>
               <button
                 type="button"
-                onClick={() => setShowParticipantsModal(true)}
-                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-slate-700 hover:text-white transition shadow-sm"
-                title="Add multiple participants"
+                onClick={copyMeetingLink}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[11px] font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-slate-700 hover:text-white transition shadow-sm"
+                title="Copy meeting link to invite real users"
               >
-                <UserPlus className="h-3 w-3 text-indigo-400" />
-                <span>+ Add user</span>
+                {copiedLink ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3 text-indigo-400" />}
+                <span>{copiedLink ? "Link copied" : "Invite"}</span>
               </button>
             </div>
-            <p className="hidden text-xs text-slate-500 md:block">Multi-user view active • Speak naturally</p>
+            <p className="hidden text-xs text-slate-500 md:block">Real-time room • {code}</p>
           </div>
           <div className="min-h-[360px] flex-1 p-3">
-            {!isMockLiveKit && tracks.length > 1 ? (
-              <GridLayout tracks={tracks} className="h-full min-h-[360px]">
-                <ParticipantTile />
-              </GridLayout>
-            ) : (
-              <div
-                className={`grid gap-3 h-full min-h-[360px] w-full ${
-                  displayParticipants.length <= 1
-                    ? "grid-cols-1"
-                    : displayParticipants.length === 2
-                    ? "grid-cols-1 md:grid-cols-2"
-                    : displayParticipants.length <= 4
-                    ? "grid-cols-1 sm:grid-cols-2"
-                    : displayParticipants.length <= 6
-                    ? "grid-cols-2 lg:grid-cols-3"
-                    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-                }`}
-              >
-                {displayParticipants.map((p) =>
-                  p.isLocal ? (
-                    <div key={p.id} className="relative h-full w-full min-h-[200px]">
-                      <LocalCameraStage
-                        displayName={displayName}
-                        cameraOn={localCamOn}
-                        micOn={localMicOn}
-                        streamRef={localStreamRef}
-                        sharedStream={sharedStream}
-                      />
+            {!isMockLiveKit ? (
+              <div className="relative h-full w-full min-h-[360px]">
+                {tracks.length > 0 ? (
+                  <GridLayout tracks={tracks} className="h-full min-h-[360px] w-full">
+                    <ParticipantTile />
+                  </GridLayout>
+                ) : (
+                  <div className="grid h-full min-h-[360px] w-full place-items-center rounded-xl bg-slate-950 p-6 text-center">
+                    <div className="space-y-2">
+                      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                      <p className="text-sm font-medium text-slate-300">Connecting video…</p>
+                      <p className="text-xs text-slate-500">Room code: {code}</p>
                     </div>
-                  ) : (
-                    <div key={p.id} className="relative h-full w-full min-h-[200px]">
-                      <RemoteParticipantStage participant={p} />
-                    </div>
-                  )
+                  </div>
                 )}
+              </div>
+            ) : (
+              <div className="relative h-full w-full min-h-[200px]">
+                <LocalCameraStage
+                  displayName={displayName}
+                  cameraOn={localCamOn}
+                  micOn={localMicOn}
+                  streamRef={localStreamRef}
+                  sharedStream={sharedStream}
+                />
               </div>
             )}
           </div>
@@ -1020,48 +933,10 @@ function InCall({
               </button>
             </div>
 
-            {/* Quick Add Participant Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (newParticipantName.trim()) {
-                  addParticipant(newParticipantName);
-                  setNewParticipantName("");
-                }
-              }}
-              className="mb-2 flex gap-1.5"
-            >
-              <input
-                type="text"
-                placeholder="Enter name to add to meeting…"
-                value={newParticipantName}
-                onChange={(e) => setNewParticipantName(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!newParticipantName.trim()}
-                className="flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40 transition shadow-sm"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add</span>
-              </button>
-            </form>
-
-            {/* Quick Add Suggestions */}
-            <div className="mb-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-[10px] text-slate-500">Quick add:</span>
-              {["Arjun Mehta", "Meera Patel", "Sam Wilson", "Sarah Jenkins"].map((quickName) => (
-                <button
-                  key={quickName}
-                  type="button"
-                  onClick={() => addParticipant(quickName)}
-                  disabled={displayParticipants.some((p) => p.name.toLowerCase() === quickName.toLowerCase())}
-                  className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-2 py-0.5 text-[10px] text-slate-300 hover:border-indigo-500/50 hover:bg-indigo-600/20 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition"
-                >
-                  +{quickName.split(" ")[0]}
-                </button>
-              ))}
+            <div className="mb-3 px-1">
+              <p className="text-[11px] text-slate-400">
+                Share the code or link with anyone to join this live call.
+              </p>
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
@@ -1105,16 +980,6 @@ function InCall({
                       <Video className="h-3.5 w-3.5 text-emerald-400" />
                     ) : (
                       <VideoOff className="h-3.5 w-3.5 text-slate-500" />
-                    )}
-                    {extraParticipants.some((ep) => ep.id === p.id) && (
-                      <button
-                        type="button"
-                        onClick={() => removeParticipant(p.id)}
-                        className="rounded p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
-                        title="Remove participant"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
                     )}
                   </div>
                 </div>
@@ -1207,14 +1072,21 @@ export default function Room({
 
         setMeetingId(meeting.id);
         setHostId(meeting.host_id ?? undefined);
-        setDisplayName(user.displayName);
+        let initialName = user.displayName;
+        if (typeof window !== "undefined") {
+          const stored = localStorage.getItem("meetmate_user_name");
+          if (stored && stored.trim()) initialName = stored.trim();
+        }
+        setDisplayName(initialName);
+
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
-          (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null);
+          (typeof window !== "undefined" ? localStorage.getItem("meetmate_user_id") : null) ||
+          `user-${Math.random().toString(36).substring(2, 9)}`;
         setUserId(resolvedUserId);
 
-        const result = await getLiveKitCredentials(code, user.displayName);
+        const result = await getLiveKitCredentials(code, initialName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
         if (!cancelled) {
@@ -1235,16 +1107,25 @@ export default function Room({
     setJoining(true);
     setJoinError(null);
 
-    const effectiveMeetingId = meetingId || `demo-${code.toLowerCase()}`;
+    const effectiveMeetingId = meetingId || `meet-${code.toLowerCase()}`;
     const effectiveUserId = userId || `user-${Math.floor(Math.random() * 9000) + 1000}`;
+    const finalDisplayName = displayName.trim() || `User-${effectiveUserId.slice(-4)}`;
     setMeetingId(effectiveMeetingId);
     setUserId(effectiveUserId);
+    setDisplayName(finalDisplayName);
+
+    try {
+      const freshCredentials = await getLiveKitCredentials(code, finalDisplayName);
+      setCredentials(freshCredentials);
+    } catch {
+      // Continue with existing credentials
+    }
 
     try {
       const response = await fetch(`/api/meetings/${encodeURIComponent(effectiveMeetingId)}/consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: effectiveUserId, displayName }),
+        body: JSON.stringify({ userId: effectiveUserId, displayName: finalDisplayName }),
       });
       if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
     } catch (cause) {
@@ -1253,7 +1134,7 @@ export default function Room({
         setJoinError(cause instanceof Error ? cause.message : "Consent could not be recorded. Try again.");
         return;
       }
-      handleNotice({ kind: "info", message: "Local demo: consent API is unavailable; continuing without server logging." });
+      handleNotice({ kind: "info", message: "Continuing to live room." });
     }
 
     const parsedStart = suppliedStartedAt ? Date.parse(suppliedStartedAt) : Number.NaN;
@@ -1281,6 +1162,12 @@ export default function Room({
         <Lobby
           code={code}
           displayName={displayName}
+          onDisplayNameChange={(name) => {
+            setDisplayName(name);
+            try {
+              localStorage.setItem("meetmate_user_name", name);
+            } catch {}
+          }}
           consented={consented}
           serverConsentAvailable={Boolean(meetingId && userId)}
           joining={joining}

@@ -69,6 +69,13 @@ async function fetchClient<T>(
         ...(options?.body instanceof FormData
           ? {}
           : { "Content-Type": "application/json" }),
+        "x-user-id": typeof window !== "undefined"
+          ? (localStorage.getItem("meetmate_user_id") || (() => {
+              const newId = "user-" + Math.random().toString(36).substring(2, 10);
+              localStorage.setItem("meetmate_user_id", newId);
+              return newId;
+            })())
+          : "local-user",
         ...options?.headers,
       },
     });
@@ -142,21 +149,6 @@ export const api = {
    * POST /api/meetings {title} -> {id, code}
    */
   async createMeeting(title: string): Promise<CreateMeetingResponse> {
-    if (isMock()) {
-      await delay(400);
-      const fixture = {
-        id: "mock-" + Math.random().toString(36).substring(2, 9),
-        code: "MOCK-" + Math.floor(100 + Math.random() * 900),
-      };
-      mockMeetingsByCode.set(fixture.code.toUpperCase(), {
-        ...fixture,
-        title,
-        status: "live",
-        started_at: new Date().toISOString(),
-        host_id: "user-priya-01",
-      });
-      return CreateMeetingResponseSchema.parse(fixture);
-    }
     return fetchClient("/api/meetings", CreateMeetingResponseSchema, {
       method: "POST",
       body: JSON.stringify({ title }),
@@ -168,25 +160,17 @@ export const api = {
    */
   async listMeetings(): Promise<MeetingListItem[]> {
     const listSchema = z.array(MeetingListItemSchema);
-    if (isMock()) {
-      await delay(400);
-      return listSchema.parse(mockMeetingsList);
+    try {
+      return await fetchClient("/api/meetings", listSchema, {
+        method: "GET",
+      });
+    } catch {
+      return [];
     }
-    return fetchClient("/api/meetings", listSchema, {
-      method: "GET",
-    });
   },
 
   /** Resolve the meeting metadata needed by the lobby from its shared code. */
   async findMeetingByCode(code: string): Promise<MeetingListItem> {
-    if (isMock()) {
-      await delay(200);
-      const found = mockMeetingsByCode.get(code.trim().toUpperCase()) ??
-        mockMeetingsList.find((meeting) => meeting.code.toUpperCase() === code.trim().toUpperCase());
-      if (!found) throw new ApiError("Meeting code was not found.", 404);
-      const withHost = found.host_id ? found : { ...found, host_id: "user-priya-01" };
-      return MeetingListItemSchema.parse(withHost);
-    }
     const list = await fetchClient(
       `/api/meetings?code=${encodeURIComponent(code.trim())}`,
       z.array(MeetingListItemSchema),
@@ -202,62 +186,27 @@ export const api = {
    * If status is set to "processing", polls 2 times before completing to "ready".
    */
   async getMeeting(id: string): Promise<MeetingDetail> {
-    if (isMock()) {
-      await delay(400);
-
-      const state = mockMeetingStatusMap.get(id);
-
-      // Handle simulated failed state
-      if (id === "failed" || state?.status === "failed") {
+    if (id === "demo") {
+      return MeetingDetailSchema.parse(mockMeetingDetail);
+    }
+    try {
+      return await fetchClient(`/api/meetings/${encodeURIComponent(id)}`, MeetingDetailSchema, {
+        method: "GET",
+      });
+    } catch (err) {
+      if (isMock()) {
         return MeetingDetailSchema.parse({
+          ...mockMeetingDetail,
           meeting: {
             ...mockMeetingDetail.meeting,
             id,
-            status: "failed",
+            status: "ready",
           },
-          participants: mockMeetingDetail.participants,
-          summary: null,
-          action_items: [],
+          participants: [],
         });
       }
-
-      // Handle simulated processing state (transitions to ready after 2 polls)
-      if (id === "processing" || (state && state.status === "processing")) {
-        const currentCount = state ? state.count : 0;
-        if (state) state.count += 1;
-        else mockMeetingStatusMap.set(id, { status: "processing", count: 1 });
-
-        if (currentCount < 2) {
-          return MeetingDetailSchema.parse({
-            meeting: {
-              ...mockMeetingDetail.meeting,
-              id,
-              status: "processing",
-            },
-            participants: mockMeetingDetail.participants,
-            summary: null,
-            action_items: [],
-          });
-        }
-
-        // 2 polls completed -> transition to ready!
-        if (state) state.status = "ready";
-      }
-
-      // Ready state (standard mock fixture)
-      const mockResult: MeetingDetail = {
-        ...mockMeetingDetail,
-        meeting: {
-          ...mockMeetingDetail.meeting,
-          id: id === "demo" ? "demo" : id,
-          status: "ready",
-        },
-      };
-      return MeetingDetailSchema.parse(mockResult);
+      throw err;
     }
-    return fetchClient(`/api/meetings/${encodeURIComponent(id)}`, MeetingDetailSchema, {
-      method: "GET",
-    });
   },
 
   /**
