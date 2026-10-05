@@ -31,6 +31,49 @@ async function runTestSuite() {
 
   // Enable test pipeline mode so test runs predictably offline
   process.env.GEMINI_API_KEY = "test-mock-key";
+  globalThis.fetch = async (input, init) => {
+    if (String(input).includes("key=killed")) {
+      return new Response(JSON.stringify({ error: { message: "Mock invalid key", code: 400 } }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const requestBody = JSON.parse(String(init?.body ?? "{}")) as {
+      contents?: Array<{ parts?: Array<{ text?: string }> }>;
+    };
+    const prompt = requestBody.contents?.[0]?.parts?.[0]?.text ?? "";
+    const result = prompt.includes("You extract action items")
+      ? [
+          {
+            title: "Write the API design docs",
+            owner_name: "Alice",
+            due_date: "2026-10-09",
+            priority: "medium",
+            source_quote: "I'll write the design docs for the new API by Friday.",
+            timestamp_ms: 5000,
+          },
+          {
+            title: "Review the database migration scripts",
+            owner_name: "Bob",
+            due_date: null,
+            priority: "medium",
+            source_quote: "I will review the database migration scripts.",
+            timestamp_ms: 12000,
+          },
+        ]
+      : {
+          tldr: "The team planned the API design work and database migration review.",
+          key_points: ["Alice will prepare the API design documents.", "Bob will review the migration scripts."],
+          decisions: ["The team agreed to complete an API design review."],
+          open_questions: [],
+        };
+
+    return new Response(
+      JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(result) }] } }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  };
 
   // ─── Test 1: Unauthenticated request -> 401 ──────────────────────────────
   console.log("[Test 1] Testing unauthenticated POST /api/meetings/:id/end (expect 401)...");
@@ -83,7 +126,7 @@ async function runTestSuite() {
       meetingId: testMeeting.id,
       speakerId: hostUser,
       speakerName: "Alice",
-      text: "Welcome team. I'll write the design docs for the new API by Friday.",
+      text: "I'll write the design docs for the new API by Friday.",
       tMs: 5000,
     },
     {
@@ -92,6 +135,27 @@ async function runTestSuite() {
       speakerName: "Bob",
       text: "Sounds great. I will review the database migration scripts.",
       tMs: 12000,
+    },
+    {
+      meetingId: testMeeting.id,
+      speakerId: hostUser,
+      speakerName: "Alice",
+      text: "We should coordinate when the reviews are finished so the API work stays on schedule.",
+      tMs: 18000,
+    },
+    {
+      meetingId: testMeeting.id,
+      speakerId: guestUser,
+      speakerName: "Bob",
+      text: "The design document will explain the request format and ownership for each database change.",
+      tMs: 24000,
+    },
+    {
+      meetingId: testMeeting.id,
+      speakerId: hostUser,
+      speakerName: "Alice",
+      text: "Let's confirm the database changes with QA before merging the API design document.",
+      tMs: 30000,
     },
   ]);
 
@@ -157,8 +221,36 @@ async function runTestSuite() {
       meetingId: failMeeting.id,
       speakerId: hostUser,
       speakerName: "Alice",
-      text: "Quick update before disconnection.",
-      tMs: 1000,
+      text: "I'll write the design docs for the new API by Friday.",
+      tMs: 5000,
+    },
+    {
+      meetingId: failMeeting.id,
+      speakerId: guestUser,
+      speakerName: "Bob",
+      text: "I will review the database migration scripts.",
+      tMs: 12000,
+    },
+    {
+      meetingId: failMeeting.id,
+      speakerId: hostUser,
+      speakerName: "Alice",
+      text: "We should coordinate when the reviews are finished so the API work stays on schedule.",
+      tMs: 18000,
+    },
+    {
+      meetingId: failMeeting.id,
+      speakerId: guestUser,
+      speakerName: "Bob",
+      text: "The design document will explain the request format and ownership for each database change.",
+      tMs: 24000,
+    },
+    {
+      meetingId: failMeeting.id,
+      speakerId: hostUser,
+      speakerName: "Alice",
+      text: "Let's confirm the database changes with QA before merging the API design document.",
+      tMs: 30000,
     },
   ]);
 

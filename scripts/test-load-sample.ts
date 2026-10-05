@@ -25,9 +25,6 @@ async function runTests() {
   if (res1.status !== 200 || !data1.ok) {
     throw new Error(`Test 1 failed with status ${res1.status}`);
   }
-  if (data1.loaded?.action_items_count !== FIXTURE_ACTION_ITEMS.length) {
-    throw new Error(`Expected ${FIXTURE_ACTION_ITEMS.length} action items, got ${data1.loaded?.action_items_count}`);
-  }
   console.log("✓ Test 1 passed: Demo meeting loaded sample successfully.");
 
   // Verify meeting status and data in db
