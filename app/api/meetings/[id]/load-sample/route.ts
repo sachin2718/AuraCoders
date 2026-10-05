@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { after, NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import sprintSample from "@/samples/sample-sprint-sync.json";
 import standupSample from "@/samples/standup.json";
@@ -97,14 +97,16 @@ export async function POST(
     await setStatus(meetingId, "processing");
     await insertSegments(segments);
 
-    // The mock demo remains usable without an AI key. Real/sample processing uses
-    // the same validated P3 pipeline as the normal end-meeting route.
-    if (isMockMode() && !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY) {
-      await saveResults(meetingId, {
-        summary: FIXTURE_SUMMARY,
-        actionItems: FIXTURE_ACTION_ITEMS,
-      });
-    } else {
+    const processSample = async () => {
+      // Keep the mock demo usable without requiring a Gemini key.
+      if (isMockMode() && !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY) {
+        await saveResults(meetingId, {
+          summary: FIXTURE_SUMMARY,
+          actionItems: FIXTURE_ACTION_ITEMS,
+        });
+        return;
+      }
+
       const result = await runPipeline({
         meetingId,
         meetingDate: meetingData.meeting.started_at,
@@ -129,6 +131,32 @@ export async function POST(
           t_ms: item.timestamp_ms,
         })),
       });
+    };
+
+    const useMockResults = isMockMode() && !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY;
+    if (useMockResults) {
+      await processSample();
+    } else {
+      // Gemini can take several seconds or retry on rate limits. Finish the API
+      // request now so the dashboard can open the summary's processing state.
+      try {
+        after(async () => {
+          try {
+            await processSample();
+          } catch {
+            console.error(`[load-sample:${meetingId}] Background processing failed`);
+            try {
+              await setStatus(meetingId, "failed");
+            } catch {
+              // The meeting may have disappeared while processing.
+            }
+          }
+        });
+      } catch {
+        // Direct route-handler calls (for example, a local script) have no
+        // Next request lifecycle. Run inline in that case.
+        await processSample();
+      }
     }
 
     return NextResponse.json({ ok: true });
