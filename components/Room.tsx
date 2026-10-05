@@ -3,6 +3,7 @@
 import {
   ControlBar,
   GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -96,6 +97,8 @@ function InCall({
 
   // Track the local participant's active screen share track
   const localScreenShareTrack = useMemo(() => {
+    if (!localParticipant) return null;
+
     const localRef = screenShareTracks.find(
       (t) => t.participant.isLocal && t.publication?.track && !t.publication.isMuted
     );
@@ -135,6 +138,8 @@ function InCall({
    */
   const releaseMedia = useCallback(async () => {
     try {
+      if (!localParticipant) return;
+
       // 1. Mute and disable devices on local participant
       await localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
       await localParticipant.setCameraEnabled(false).catch(() => undefined);
@@ -185,10 +190,13 @@ function InCall({
     if (!consented) return;
     const line = { speakerName: displayName, text, tMs };
     setLocalTranscriptLines((current) => [...current, line]);
-    void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(line)), {
-      reliable: true,
-      topic: "transcript",
-    }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
+
+    if (localParticipant) {
+      void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(line)), {
+        reliable: true,
+        topic: "transcript",
+      }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
+    }
 
     if (!meetingId) {
       onNotice({ kind: "info", message: "Transcript is visible to participants but cannot be saved until meeting metadata is supplied." });
@@ -244,11 +252,13 @@ function InCall({
       }
 
       // 2. Broadcast LiveKit data message {type:"meeting-ended"} to all participants
-      const payload = new TextEncoder().encode(JSON.stringify({ type: "meeting-ended" }));
-      await localParticipant.publishData(payload, {
-        reliable: true,
-        topic: "meetmate-control",
-      }).catch(() => undefined);
+      if (localParticipant) {
+        const payload = new TextEncoder().encode(JSON.stringify({ type: "meeting-ended" }));
+        await localParticipant.publishData(payload, {
+          reliable: true,
+          topic: "meetmate-control",
+        }).catch(() => undefined);
+      }
 
       // 3. Stop speech recognition and release camera/mic
       await releaseMedia();
@@ -575,19 +585,21 @@ export default function Room({
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} />
-        <InCall
-          code={code}
-          displayName={displayName}
-          consented={consented}
-          meetingId={meetingId}
-          hostId={hostId}
-          userId={userId}
-          startedAt={sessionStartedAt}
-          onNotice={handleNotice}
-          onMeetingEnded={navigateToSummary}
-          onLeave={() => router.push("/dashboard")}
-        />
+        <LayoutContextProvider>
+          <ConnectionNotices onNotice={handleNotice} />
+          <InCall
+            code={code}
+            displayName={displayName}
+            consented={consented}
+            meetingId={meetingId}
+            hostId={hostId}
+            userId={userId}
+            startedAt={sessionStartedAt}
+            onNotice={handleNotice}
+            onMeetingEnded={navigateToSummary}
+            onLeave={() => router.push("/dashboard")}
+          />
+        </LayoutContextProvider>
       </LiveKitRoom>
     </main>
   );
