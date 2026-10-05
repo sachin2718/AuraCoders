@@ -614,7 +614,8 @@ export async function saveResults(
       .single();
     if (sRes.error) throw new Error(`Failed to save summary: ${sRes.error.message}`);
 
-    // 2. Insert action items
+    // 2. Clear old action items if retrying, then insert new items
+    await supabase.from("action_items").delete().eq("meeting_id", meetingId);
     let savedItems: ActionItem[] = [];
     if (actionItemRows.length > 0) {
       const aRes = await supabase
@@ -639,6 +640,11 @@ export async function saveResults(
 
   // Fallback
   mockStore.summaries.set(meetingId, { ...summaryRow });
+  for (const [key, item] of Array.from(mockStore.actionItems.entries())) {
+    if (item.meeting_id === meetingId) {
+      mockStore.actionItems.delete(key);
+    }
+  }
   for (const item of actionItemRows) {
     mockStore.actionItems.set(item.id, { ...item });
   }
@@ -711,7 +717,7 @@ export async function listMeetingsForUser(userId: string): Promise<Meeting[]> {
 
 /**
  * 11. getTodosForUser(userId)
- * Returns action items for the user, with joined meeting title.
+ * Returns action items for the user, with joined meeting title, ordered by due_date nulls last.
  */
 export async function getTodosForUser(
   userId: string
@@ -722,7 +728,7 @@ export async function getTodosForUser(
       .from("action_items")
       .select("*, meetings(title)")
       .eq("owner_id", userId)
-      .order("created_at", { ascending: false });
+      .order("due_date", { ascending: true, nullsFirst: false });
 
     if (error) {
       throw new Error(`Failed to get todos for user: ${error.message}`);
@@ -759,11 +765,47 @@ export async function getTodosForUser(
       });
     }
   }
-  return results;
+
+  // Ordered by due_date nulls last (earlier dates first, nulls at the end)
+  return results.sort((a, b) => {
+    if (a.due_date && b.due_date) {
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    }
+    if (a.due_date && !b.due_date) return -1;
+    if (!a.due_date && b.due_date) return 1;
+    return 0;
+  });
 }
 
 /**
- * 12. updateTodoStatus(id, userId, status)
+ * 12. getActionItem(id)
+ * Fetches a single action item by ID.
+ */
+export async function getActionItem(id: string): Promise<ActionItem | null> {
+  if (isSupabaseConfigured()) {
+    const supabase = getSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("action_items")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(`Failed to get action item: ${error.message}`);
+    }
+    return (data as ActionItem) || null;
+  }
+
+  // Fallback
+  const item = mockStore.actionItems.get(id);
+  if (item) {
+    return { ...item };
+  }
+  return null;
+}
+
+/**
+ * 13. updateTodoStatus(id, userId, status)
  * Updates the status ('todo' | 'done') of an action item.
  */
 export async function updateTodoStatus(

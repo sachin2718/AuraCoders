@@ -104,6 +104,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Check authorization: must be host or participant
+  const isHost = meeting.host_id === user.id;
+  const isParticipant = meetingData.participants.some((p) => p.user_id === user.id);
+  if (!isHost && !isParticipant) {
+    return NextResponse.json(
+      { error: "Forbidden: You are not a participant or host of this meeting" },
+      { status: 403 }
+    );
+  }
+
   // 7. Ignore duplicate lines within 2 seconds
   const dedupKey = `${meetingId}:${speakerName.toLowerCase()}`;
   const prev = recentUtterances.get(dedupKey);
