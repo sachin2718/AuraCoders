@@ -116,7 +116,7 @@ const DEMO_MEETING: Meeting = {
   id: "a1b2c3d4-0000-0000-0000-000000000001",
   code: "MEET-2025",
   title: "Q4 Product Planning - MeetMate Demo",
-  host_id: "user-priya-0001",
+  host_id: "user-priya-01",
   status: "live",
   started_at: "2025-10-05T09:00:00.000Z",
   ended_at: null,

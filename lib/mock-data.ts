@@ -64,10 +64,11 @@ export const MEETING_ID = "a1b2c3d4-0000-0000-0000-000000000001";
 export const MEETING_CODE = "MEET-2025";
 
 export const USER_IDS = {
-  priya: "user-priya-0001",
-  arjun: "user-arjun-0002",
-  meera: "user-meera-0003",
-  sam: "user-sam-0004",
+  // Keep fixture ownership aligned with the demo identities issued by auth.
+  priya: "user-priya-01",
+  arjun: "user-arjun-02",
+  meera: "user-meera-03",
+  sam: "user-sam-04",
 };
 
 // ─── Fixture: Meeting ────────────────────────────────────────────────────────
