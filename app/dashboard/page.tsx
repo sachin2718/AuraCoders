@@ -98,7 +98,7 @@ export default function DashboardPage() {
   // ── Feature 2: Join Meeting with Code ──────────────────────────────
   function handleJoinCode(e: React.FormEvent) {
     e.preventDefault();
-    const code = joinCode.trim();
+    const code = joinCode.trim().toUpperCase();
     if (!code) {
       toast({
         title: "Meeting Code Required",

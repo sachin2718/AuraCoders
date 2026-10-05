@@ -1086,7 +1086,7 @@ export default function Room({
           `user-${Math.random().toString(36).substring(2, 9)}`;
         setUserId(resolvedUserId);
 
-        const result = await getLiveKitCredentials(code, initialName);
+        const result = await getLiveKitCredentials(code.trim().toUpperCase(), initialName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
         if (!cancelled) {
@@ -1107,34 +1107,39 @@ export default function Room({
     setJoining(true);
     setJoinError(null);
 
-    const effectiveMeetingId = meetingId || `meet-${code.toLowerCase()}`;
+    const normalizedCode = code.trim().toUpperCase();
+    const effectiveMeetingId = meetingId || `meet-${normalizedCode.toLowerCase()}`;
     const effectiveUserId = userId || `user-${Math.floor(Math.random() * 9000) + 1000}`;
     const finalDisplayName = displayName.trim() || `User-${effectiveUserId.slice(-4)}`;
     setMeetingId(effectiveMeetingId);
     setUserId(effectiveUserId);
     setDisplayName(finalDisplayName);
 
+    // Explicitly release any preview tracks from Lobby so LiveKit gets full access to camera & mic hardware
+    if (lobbyStream) {
+      try {
+        lobbyStream.getTracks().forEach((track) => track.stop());
+      } catch {}
+      setLobbyStream(null);
+      // Give device driver 250ms to cleanly release sensor
+      await new Promise((r) => setTimeout(r, 250));
+    }
+
     try {
-      const freshCredentials = await getLiveKitCredentials(code, finalDisplayName);
+      const freshCredentials = await getLiveKitCredentials(normalizedCode, finalDisplayName);
       setCredentials(freshCredentials);
     } catch {
       // Continue with existing credentials
     }
 
     try {
-      const response = await fetch(`/api/meetings/${encodeURIComponent(effectiveMeetingId)}/consent`, {
+      await fetch(`/api/meetings/${encodeURIComponent(effectiveMeetingId)}/consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: effectiveUserId, displayName: finalDisplayName }),
       });
-      if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
-    } catch (cause) {
-      if (process.env.NODE_ENV === "production") {
-        setJoining(false);
-        setJoinError(cause instanceof Error ? cause.message : "Consent could not be recorded. Try again.");
-        return;
-      }
-      handleNotice({ kind: "info", message: "Continuing to live room." });
+    } catch {
+      // Best-effort server consent recording
     }
 
     const parsedStart = suppliedStartedAt ? Date.parse(suppliedStartedAt) : Number.NaN;

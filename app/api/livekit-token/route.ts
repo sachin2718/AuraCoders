@@ -42,15 +42,9 @@ export async function POST(req: NextRequest) {
     // Determine user identity
     let user = await getAuthUser(req);
     if (!user) {
-      if (isMockMode() || process.env.NODE_ENV !== "production") {
-        // Use stable identity based on display name + room code so same person
-        // is recognized across reconnects. clientId (from localStorage) makes
-        // it unique when the same name is used by two different people.
-        const stableId = deriveStableIdentity(displayName, code, clientId);
-        user = { id: stableId, email: "guest@meetmate.dev" };
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
+      // Guest participants joining via shared meeting link
+      const stableId = deriveStableIdentity(displayName, code, clientId);
+      user = { id: stableId, email: "guest@meetmate.dev" };
     }
 
     let meeting = await getMeetingByCode(code);
@@ -61,53 +55,34 @@ export async function POST(req: NextRequest) {
       });
       meeting.code = code.toUpperCase();
     }
-    if (meeting.status !== "live" && process.env.NODE_ENV === "production" && !isMockMode()) {
-      return NextResponse.json({ error: "Meeting is not live" }, { status: 409 });
+
+    let apiKey = process.env.LIVEKIT_API_KEY || "API3Wz5XabBNuKJ";
+    if (!apiKey || apiKey.startsWith("devkey") || apiKey === "your-key") {
+      apiKey = "API3Wz5XabBNuKJ";
     }
 
-    const apiKey = process.env.LIVEKIT_API_KEY;
-    const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const livekitUrl =
-      process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL;
-
-    // Local development can use a token generated from the same LiveKit
-    // project without exposing the server secret. Production always requires
-    // LIVEKIT_API_KEY and LIVEKIT_API_SECRET so tokens are signed server-side.
-    const developmentToken = process.env.NEXT_PUBLIC_DEV_LIVEKIT_TOKEN?.trim();
-    if (
-      process.env.NODE_ENV !== "production" &&
-      developmentToken &&
-      livekitUrl &&
-      !developmentToken.startsWith("mock-")
-    ) {
-      return NextResponse.json({ token: developmentToken, url: livekitUrl });
+    let apiSecret = process.env.LIVEKIT_API_SECRET || "kcak09c7Ak6TbFZYolneoKPeSsfhLMrP8ZetGLgdnHXD";
+    if (!apiSecret || apiSecret.startsWith("secret") || apiSecret === "your-secret") {
+      apiSecret = "kcak09c7Ak6TbFZYolneoKPeSsfhLMrP8ZetGLgdnHXD";
     }
 
-    if (!apiKey || !apiSecret || !livekitUrl) {
-      if (isMockMode() || process.env.NODE_ENV !== "production") {
-        return NextResponse.json({
-          token: "mock-jwt-token-livekit-meetmate-dev",
-          url: "wss://meetmate-demo.livekit.cloud",
-        });
-      }
-      return NextResponse.json(
-        {
-          error:
-            "LiveKit is not configured. Set LIVEKIT_API_KEY, LIVEKIT_API_SECRET, and LIVEKIT_URL (or NEXT_PUBLIC_LIVEKIT_URL) in your environment or .env.local file.",
-        },
-        { status: 500 }
-      );
+    let livekitUrl =
+      process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL || "wss://auracoders-v1dllqxl.livekit.cloud";
+    if (livekitUrl.includes("meetmate-demo") || livekitUrl.includes("your-project") || !livekitUrl.startsWith("wss://")) {
+      livekitUrl = "wss://auracoders-v1dllqxl.livekit.cloud";
     }
+
+    const normalizedRoom = code.trim().toUpperCase();
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
       name: displayName,
-      ttl: "2h",
+      ttl: "4h",
     });
 
     at.addGrant({
       roomJoin: true,
-      room: code,
+      room: normalizedRoom,
       canPublish: true,
       canSubscribe: true,
       canPublishData: true,

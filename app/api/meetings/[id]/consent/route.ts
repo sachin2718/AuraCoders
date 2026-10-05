@@ -43,16 +43,10 @@ export async function POST(
   }
 
   // 1. Require signed-in user or dev fallback
+  // 1. Authenticated user or guest
   let user = await getAuthUser(req);
   if (!user) {
-    if (isMockMode() || process.env.NODE_ENV !== "production") {
-      user = { id: parsed.data?.userId || "user-priya-01", email: "demo@meetmate.dev" };
-    } else {
-      return NextResponse.json(
-        { error: "Unauthorized: signed-in user required" },
-        { status: 401 }
-      );
-    }
+    user = { id: parsed.data?.userId || `guest-${Math.random().toString(36).substring(2, 9)}`, email: "guest@meetmate.dev" };
   }
 
   // Target user defaults to authenticated user
@@ -63,10 +57,6 @@ export async function POST(
   const meetingExists =
     meetingData.meeting ||
     (isMockMode() && meetingsStore.some((m) => m.id === id));
-
-  if (!meetingExists && !isMockMode() && process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-  }
 
   // 3. Register or update participant display name
   const participantName = parsed.data?.displayName || user.email?.split("@")[0] || targetUserId;

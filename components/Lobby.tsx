@@ -70,9 +70,7 @@ export default function Lobby({
 
     return () => {
       active = false;
-      if (!onStreamReady) {
-        streamRef.current?.getTracks().forEach((track) => track.stop());
-      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, [onStreamReady]);
 

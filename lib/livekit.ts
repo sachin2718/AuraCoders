@@ -8,23 +8,27 @@ export async function getSignedInDisplayName(localName?: string): Promise<string
 }
 
 export async function getMeetingUser(localName?: string, suppliedUserId?: string): Promise<MeetingUser> {
-  if (!isSupabaseConfigured()) {
-    return {
-      id: suppliedUserId?.trim() || null,
-      displayName: localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`,
-    };
+  if (isSupabaseConfigured()) {
+    try {
+      const { data: { user } } = await createBrowserClient().auth.getUser();
+      if (user) {
+        const metadataName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.user_metadata?.display_name;
+        const displayName = typeof metadataName === "string" && metadataName.trim()
+          ? metadataName.trim()
+          : user.email?.trim();
+        if (displayName) {
+          return { id: user.id, displayName };
+        }
+      }
+    } catch {
+      // Non-blocking fallback to guest
+    }
   }
 
-  const { data: { user }, error } = await createBrowserClient().auth.getUser();
-  if (error) throw new Error(`Could not read the signed-in user: ${error.message}`);
-  if (!user) throw new Error("Sign in before joining this meeting.");
-
-  const metadataName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.user_metadata?.display_name;
-  const displayName = typeof metadataName === "string" && metadataName.trim()
-    ? metadataName.trim()
-    : user.email?.trim();
-  if (!displayName) throw new Error("Your signed-in account has no display name.");
-  return { id: user.id, displayName };
+  return {
+    id: suppliedUserId?.trim() || null,
+    displayName: localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`,
+  };
 }
 
 export async function getLiveKitCredentials(code: string, displayName: string): Promise<LiveKitCredentials> {

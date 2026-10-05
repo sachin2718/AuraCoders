@@ -14,9 +14,11 @@ function first(value: string | string[] | undefined): string | undefined {
 export default async function MeetingPage({ params, searchParams }: MeetingPageProps) {
   const [{ code }, query] = await Promise.all([params, searchParams]);
 
+  const normalizedCode = code.trim().toUpperCase();
+
   return (
     <Room
-      code={code}
+      code={normalizedCode}
       meetingId={first(query.meetingId)}
       hostId={first(query.hostId)}
       userId={first(query.userId)}
