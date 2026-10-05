@@ -3,26 +3,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
   {
     variants: {
       variant: {
         default:
-          "bg-[#722F37] text-white shadow-sm hover:bg-[#5A1827] active:scale-[0.98] dark:bg-[#722F37] dark:hover:bg-[#5A1827]",
+          "bg-[#800020] text-white shadow-sm hover:bg-[#600018] active:scale-[0.98]",
         destructive:
-          "bg-[#8B2635] text-white shadow-sm hover:bg-[#721F2B] active:scale-[0.98]",
+          "bg-[#9C0E2E] text-white shadow-sm hover:bg-[#7A0822] active:scale-[0.98]",
         outline:
-          "border border-[#D7CCC8] bg-white text-[#2C1810] shadow-sm hover:bg-[#FAF8F5] active:scale-[0.98] dark:border-[#4A3730] dark:bg-[#231815] dark:text-[#F5EFEB] dark:hover:bg-[#2C1E1A]",
+          "border-2 border-[#800020] bg-white text-[#800020] shadow-sm hover:bg-[#FFF0F3] active:scale-[0.98]",
         secondary:
-          "bg-[#EFE8E1] text-[#2C1810] shadow-sm hover:bg-[#E2D8CF] active:scale-[0.98] dark:bg-[#2F211C] dark:text-[#EFE8E1] dark:hover:bg-[#3D2C25]",
+          "bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4] shadow-sm hover:bg-[#FCE0E6] active:scale-[0.98]",
         ghost:
-          "text-[#2C1810] hover:bg-[#EFE8E1] hover:text-[#2C1810] dark:text-[#EFE8E1] dark:hover:bg-[#2F211C]",
-        link: "text-[#722F37] underline-offset-4 hover:underline dark:text-[#C97A8B]",
+          "text-[#800020] hover:bg-[#FFF0F3] hover:text-[#600018]",
+        link: "text-[#800020] underline-offset-4 hover:underline hover:text-[#600018]",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3 text-xs",
-        lg: "h-11 rounded-lg px-8 text-base",
+        sm: "h-9 rounded-lg px-3 text-xs",
+        lg: "h-11 rounded-xl px-8 text-base",
         icon: "h-10 w-10",
       },
     },

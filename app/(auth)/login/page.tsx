@@ -2,7 +2,7 @@
  * app/(auth)/login/page.tsx
  *
  * Supports BOTH instant one-click demo login AND email+password/magic-link.
- * Styled with White, Brown, and Burgundy theme (No Gradients).
+ * Styled exclusively in White & Burgundy.
  */
 
 "use client";
@@ -10,7 +10,7 @@
 import { useState, useEffect, useTransition, Suspense, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient, DEMO_USERS, isSupabaseConfigured } from "@/lib/supabase";
-import { Video, Loader2, Mail, Lock, Sparkles, UserCheck, Zap, ArrowRight } from "lucide-react";
+import { Video, Loader2, Mail, Lock, Sparkles, Zap, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Mode = "quick" | "password" | "magic";
@@ -20,7 +20,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#18110E] flex items-center justify-center text-[#A89F91]">
+        <div className="min-h-screen bg-[#FFF0F3] flex items-center justify-center text-[#800020] font-bold">
           Loading...
         </div>
       }
@@ -135,23 +135,23 @@ function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#1A110E] px-4 py-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[#FFF0F3] px-4 py-8 text-[#2B050D]">
       <div className="relative w-full max-w-md">
-        {/* Solid Card - No Gradients */}
-        <div className="overflow-hidden rounded-2xl border border-[#3E2922] bg-[#241815] shadow-xl">
-          {/* Header - Solid Burgundy */}
-          <div className="border-b border-[#522129] bg-[#722F37] px-8 py-6">
+        {/* Card */}
+        <div className="overflow-hidden rounded-3xl border-2 border-[#800020] bg-white shadow-2xl shadow-[#800020]/15">
+          {/* Header - Burgundy */}
+          <div className="border-b-2 border-[#F0B8C4] bg-[#800020] px-8 py-6 text-white">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#722F37] shadow-sm">
-                <Video size={18} />
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-[#800020] shadow-sm">
+                <Video size={20} strokeWidth={2.4} />
               </span>
               <div>
-                <h1 className="text-xl font-bold text-white">
-                  Meet<span className="text-[#E8A2B0]">Mate</span>
+                <h1 className="text-2xl font-extrabold tracking-tight">
+                  Meet<span className="text-[#F7CBD4]">Mate</span>
                 </h1>
-                <p className="flex items-center gap-1 text-xs text-[#F2C9D1]">
-                  <Sparkles size={10} />
-                  AI-powered meeting assistant
+                <p className="flex items-center gap-1.5 text-xs text-[#F7CBD4] font-medium">
+                  <Sparkles size={12} />
+                  AI-Powered Real-Time Meeting Workspace
                 </p>
               </div>
             </div>
@@ -159,18 +159,18 @@ function LoginForm() {
 
           <div className="px-8 py-6">
             {/* Quick Demo Badge */}
-            <div className="mb-5 flex items-center justify-between rounded-lg border border-[#522129] bg-[#34161C] px-3.5 py-2 text-xs text-[#E8A2B0]">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Zap size={13} className="text-[#F29EA8]" />
-                Demo Mode Active
+            <div className="mb-5 flex items-center justify-between rounded-xl border border-[#F0B8C4] bg-[#FFF0F3] px-4 py-2 text-xs text-[#800020]">
+              <span className="flex items-center gap-1.5 font-bold">
+                <Zap size={14} className="text-[#800020]" />
+                Demo Workspace
               </span>
-              <span className="rounded bg-[#722F37] px-2 py-0.5 text-[11px] font-semibold text-white">
-                1-Click Ready
+              <span className="rounded-full bg-[#800020] px-2.5 py-0.5 text-[11px] font-bold text-white">
+                1-Click Join
               </span>
             </div>
 
             {/* Mode selection tabs */}
-            <div className="mb-6 flex gap-1 rounded-lg border border-[#3E2922] bg-[#1C120F] p-1">
+            <div className="mb-6 flex gap-1.5 rounded-2xl border border-[#F0B8C4] bg-[#FFF0F3] p-1.5">
               {(
                 [
                   { id: "quick", label: "⚡ Quick Demo" },
@@ -185,10 +185,10 @@ function LoginForm() {
                     setMessage(null);
                   }}
                   className={cn(
-                    "flex-1 rounded-md py-1.5 text-xs font-medium transition-all cursor-pointer",
+                    "flex-1 rounded-xl py-2 text-xs font-bold transition-all cursor-pointer",
                     mode === m.id
-                      ? "bg-[#722F37] text-white shadow-sm"
-                      : "text-[#B8A49C] hover:text-white"
+                      ? "bg-[#800020] text-white shadow-sm"
+                      : "text-[#800020] hover:bg-white/50"
                   )}
                   id={`mode-${m.id}`}
                 >
@@ -200,8 +200,8 @@ function LoginForm() {
             {/* ── 1. One-Click Demo Access ── */}
             {mode === "quick" && (
               <div className="space-y-4">
-                <p className="text-xs text-[#B8A49C]">
-                  Select a test profile to instantly jump straight into the application without entering credentials:
+                <p className="text-xs font-semibold text-[#520919]">
+                  Select a test profile to jump straight into the application:
                 </p>
 
                 {/* Primary: Priya Sharma */}
@@ -209,46 +209,46 @@ function LoginForm() {
                   type="button"
                   disabled={isPending}
                   onClick={() => handleQuickLogin("priya")}
-                  className="flex w-full items-center justify-between rounded-xl border border-[#722F37] bg-[#3B1920] p-3.5 text-left transition-all hover:bg-[#4C1E29] hover:border-[#8E3B46] active:scale-[0.99] disabled:opacity-60 cursor-pointer shadow-sm group"
+                  className="flex w-full items-center justify-between rounded-2xl border-2 border-[#800020] bg-[#FFF0F3] p-4 text-left transition-all hover:bg-[#FCE0E6] active:scale-[0.99] disabled:opacity-60 cursor-pointer shadow-sm group"
                   id="login-priya"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#722F37] text-sm font-bold text-white shadow-sm">
+                  <div className="flex items-center gap-3.5">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#800020] text-sm font-bold text-white shadow-sm">
                       PS
                     </span>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold text-white">Priya Sharma</span>
-                        <span className="rounded bg-[#722F37]/80 px-1.5 py-0.5 text-[10px] font-medium text-[#F5C7D0]">
-                          Host / Admin
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-[#2B050D]">Priya Sharma</span>
+                        <span className="rounded-full bg-[#800020] px-2 py-0.5 text-[10px] font-bold text-white">
+                          Host
                         </span>
                       </div>
-                      <p className="text-xs text-[#B8A49C]">priya@meetmate.ai</p>
+                      <p className="text-xs font-medium text-[#800020]/70">priya@meetmate.ai</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 text-xs font-medium text-[#E8A2B0] group-hover:text-white transition-colors">
+                  <div className="flex items-center gap-1 text-xs font-bold text-[#800020] group-hover:translate-x-1 transition-transform">
                     <span>Enter</span>
-                    <ArrowRight size={14} />
+                    <ArrowRight size={15} />
                   </div>
                 </button>
 
                 {/* Secondary profiles grid */}
-                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-2 gap-3 pt-1">
                   {/* Arjun Mehta */}
                   <button
                     type="button"
                     disabled={isPending}
                     onClick={() => handleQuickLogin("arjun")}
-                    className="flex flex-col rounded-lg border border-[#3E2922] bg-[#1C120F] p-2.5 text-left transition-colors hover:border-[#722F37] hover:bg-[#281814] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                    className="flex flex-col rounded-xl border border-[#F0B8C4] bg-white p-3 text-left transition-all hover:border-[#800020] hover:bg-[#FFF0F3] active:scale-[0.99] disabled:opacity-60 cursor-pointer shadow-sm"
                     id="login-arjun"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="flex h-6 w-6 items-center justify-center rounded bg-[#4E3128] text-[11px] font-bold text-[#EFE8E1]">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#800020] text-xs font-bold text-white">
                         AM
                       </span>
-                      <span className="truncate text-xs font-semibold text-white">Arjun Mehta</span>
+                      <span className="truncate text-xs font-bold text-[#2B050D]">Arjun Mehta</span>
                     </div>
-                    <span className="text-[11px] text-[#8D766E]">Engineer</span>
+                    <span className="text-[11px] font-medium text-[#800020]">Engineer</span>
                   </button>
 
                   {/* Meera Patel */}
@@ -256,26 +256,25 @@ function LoginForm() {
                     type="button"
                     disabled={isPending}
                     onClick={() => handleQuickLogin("meera")}
-                    className="flex flex-col rounded-lg border border-[#3E2922] bg-[#1C120F] p-2.5 text-left transition-colors hover:border-[#722F37] hover:bg-[#281814] active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                    className="flex flex-col rounded-xl border border-[#F0B8C4] bg-white p-3 text-left transition-all hover:border-[#800020] hover:bg-[#FFF0F3] active:scale-[0.99] disabled:opacity-60 cursor-pointer shadow-sm"
                     id="login-meera"
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="flex h-6 w-6 items-center justify-center rounded bg-[#4E3128] text-[11px] font-bold text-[#EFE8E1]">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#800020] text-xs font-bold text-white">
                         MP
                       </span>
-                      <span className="truncate text-xs font-semibold text-white">Meera Patel</span>
+                      <span className="truncate text-xs font-bold text-[#2B050D]">Meera Patel</span>
                     </div>
-                    <span className="text-[11px] text-[#8D766E]">Designer</span>
+                    <span className="text-[11px] font-medium text-[#800020]">Designer</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* ── 2. Password form (Pre-filled for fast testing) ── */}
+            {/* ── 2. Password form ── */}
             {mode === "password" && (
               <div className="space-y-4">
-                {/* Sub-tabs */}
-                <div className="flex gap-4 border-b border-[#3E2922] pb-1">
+                <div className="flex gap-4 border-b border-[#F0B8C4] pb-1">
                   {(["signin", "signup"] as PassTab[]).map((t) => (
                     <button
                       key={t}
@@ -284,10 +283,10 @@ function LoginForm() {
                         setMessage(null);
                       }}
                       className={cn(
-                        "text-xs font-medium pb-1.5 transition-colors cursor-pointer",
+                        "text-xs font-bold pb-2 transition-colors cursor-pointer",
                         passTab === t
-                          ? "border-b-2 border-[#722F37] text-white"
-                          : "text-[#8D766E] hover:text-[#B8A49C]"
+                          ? "border-b-2 border-[#800020] text-[#800020]"
+                          : "text-[#800020]/50 hover:text-[#800020]"
                       )}
                       id={`tab-${t}`}
                     >
@@ -301,7 +300,7 @@ function LoginForm() {
                     id="pw-email"
                     type="email"
                     label="Email Address"
-                    icon={<Mail size={14} />}
+                    icon={<Mail size={15} />}
                     value={email}
                     onChange={setEmail}
                     placeholder="demo@meetmate.ai"
@@ -311,16 +310,13 @@ function LoginForm() {
                     id="pw-password"
                     type="password"
                     label="Password"
-                    icon={<Lock size={14} />}
+                    icon={<Lock size={15} />}
                     value={password}
                     onChange={setPassword}
                     placeholder="••••••••"
                     required
                     minLength={4}
                   />
-                  <p className="text-[11px] text-[#8D766E]">
-                    💡 Use an account from this Supabase project, or create one here first.
-                  </p>
                   <SubmitBtn
                     loading={isPending}
                     label={passTab === "signin" ? "Sign in to Dashboard" : "Create Account & Sign In"}
@@ -332,14 +328,14 @@ function LoginForm() {
             {/* ── 3. Magic link form ── */}
             {mode === "magic" && (
               <form onSubmit={handleMagicLink} className="space-y-4">
-                <p className="text-xs text-[#B8A49C]">
-                  Enter your email address — in demo mode, clicking below signs in instantly:
+                <p className="text-xs font-semibold text-[#520919]">
+                  Enter your email address to sign in instantly:
                 </p>
                 <Field
                   id="magic-email"
                   type="email"
                   label="Email"
-                  icon={<Mail size={14} />}
+                  icon={<Mail size={15} />}
                   value={email}
                   onChange={setEmail}
                   placeholder="demo@meetmate.ai"
@@ -353,10 +349,10 @@ function LoginForm() {
             {message && (
               <div
                 className={cn(
-                  "mt-4 rounded-lg border px-4 py-3 text-sm",
+                  "mt-4 rounded-xl border-2 px-4 py-3 text-xs font-bold",
                   message.type === "ok"
-                    ? "border-[#722F37]/40 bg-[#FAF0F2]/10 text-[#F5C7D0]"
-                    : "border-[#8A2525]/40 bg-[#FDF0F0]/10 text-[#F6B3B3]"
+                    ? "border-[#800020] bg-[#FFF0F3] text-[#800020]"
+                    : "border-[#9C0E2E] bg-[#FFF0F3] text-[#9C0E2E]"
                 )}
                 role="alert"
               >
@@ -366,15 +362,13 @@ function LoginForm() {
           </div>
         </div>
 
-        <p className="mt-5 text-center text-xs text-[#7A625A]">
-          MeetMate Demo Session • White, Brown & Burgundy Palette
+        <p className="mt-5 text-center text-xs font-semibold text-[#800020]">
+          MeetMate • Pure White &amp; Burgundy Edition
         </p>
       </div>
     </div>
   );
 }
-
-/* ── Sub-components ──────────────────────────────────────────────────────── */
 
 function Field({
   id,
@@ -399,11 +393,11 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-xs font-medium text-[#D4C3BC]">
+      <label htmlFor={id} className="block text-xs font-bold uppercase tracking-wider text-[#800020]">
         {label}
       </label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8D766E]">
+        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#800020]">
           {icon}
         </span>
         <input
@@ -414,7 +408,7 @@ function Field({
           placeholder={placeholder}
           required={required}
           minLength={minLength}
-          className="w-full rounded-lg border border-[#443029] bg-[#1A110E] py-2.5 pl-9 pr-3 text-sm text-white placeholder-[#7A625A] transition-colors focus:border-[#722F37] focus:outline-none focus:ring-1 focus:ring-[#722F37]"
+          className="w-full rounded-xl border-2 border-[#F0B8C4] bg-white py-2.5 pl-10 pr-3 text-sm font-semibold text-[#2B050D] placeholder-[#800020]/30 transition-colors focus:border-[#800020] focus:outline-none focus:ring-2 focus:ring-[#800020]/20"
         />
       </div>
     </div>
@@ -426,10 +420,10 @@ function SubmitBtn({ loading, label }: { loading: boolean; label: string }) {
     <button
       type="submit"
       disabled={loading}
-      className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#722F37] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#5A1827] focus:outline-none focus:ring-2 focus:ring-[#722F37] focus:ring-offset-2 focus:ring-offset-[#241815] disabled:opacity-60 cursor-pointer"
+      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#800020] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-[#800020]/20 transition-all hover:bg-[#600018] focus:outline-none focus:ring-2 focus:ring-[#800020] disabled:opacity-60 cursor-pointer"
       id="submit-btn"
     >
-      {loading && <Loader2 size={15} className="animate-spin" />}
+      {loading && <Loader2 size={16} className="animate-spin" />}
       {label}
     </button>
   );

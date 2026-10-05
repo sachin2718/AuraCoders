@@ -193,30 +193,30 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[#2A1B18] dark:text-[#F5EFEB]">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#2B050D]">
             Meeting Workspace
           </h1>
-          <p className="text-sm text-[#7A625A] dark:text-[#BCAAA4]">
+          <p className="text-sm font-medium text-[#520919]">
             Start instant calls, join via room code, or review past AI summaries and action items.
           </p>
         </div>
 
-        {/* Feature 4: Load Sample Meeting Button (Solid White & Brown styling) */}
+        {/* Feature 4: Load Sample Meeting Button */}
         <div>
           <Button
             onClick={handleLoadSample}
             disabled={isLoadingSample}
             variant="outline"
-            className="border-[#D7CCC8] bg-[#FAF8F5] text-[#722F37] hover:bg-[#EFE8E1] hover:text-[#5A1827] dark:border-[#4A3730] dark:bg-[#231815] dark:text-[#E8A2B0] dark:hover:bg-[#2F211C]"
+            className="border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold"
           >
             {isLoadingSample ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin text-[#722F37]" />
+                <Loader2 className="h-4 w-4 animate-spin text-[#800020]" />
                 Preparing Sample...
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4 text-[#722F37] dark:text-[#E8A2B0]" />
+                <Sparkles className="h-4 w-4 text-[#800020]" />
                 Load sample meeting
               </>
             )}
@@ -224,18 +224,18 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Action Cards Grid - Flat, Solid White cards with Warm Brown Borders */}
+      {/* Action Cards Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Feature 1: New Meeting Card */}
-        <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+        <Card className="border-2 border-[#F0B8C4] bg-white shadow-sm hover:border-[#800020] transition-colors">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FAF0F2] text-[#722F37] dark:bg-[#361A21] dark:text-[#E8A2B0]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]">
                 <PlusCircle className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle>New Meeting</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-[#2B050D]">New Meeting</CardTitle>
+                <CardDescription className="text-[#800020]/70">
                   Create an instant AI-transcribed video room
                 </CardDescription>
               </div>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                 disabled={isCreating}
                 className="flex-1"
               />
-              <Button type="submit" disabled={isCreating} className="shrink-0 bg-[#722F37] hover:bg-[#5A1827] text-white">
+              <Button type="submit" disabled={isCreating} className="shrink-0 bg-[#800020] hover:bg-[#600018] text-white font-bold shadow-md shadow-[#800020]/20">
                 {isCreating ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -268,15 +268,15 @@ export default function DashboardPage() {
         </Card>
 
         {/* Feature 2: Join with Code Card */}
-        <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+        <Card className="border-2 border-[#F0B8C4] bg-white shadow-sm hover:border-[#800020] transition-colors">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#EFE8E1] text-[#4A3026] dark:bg-[#33221C] dark:text-[#EFE8E1]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]">
                 <LogIn className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle>Join with Code</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-[#2B050D]">Join with Code</CardTitle>
+                <CardDescription className="text-[#800020]/70">
                   Enter an existing meeting code or invite link
                 </CardDescription>
               </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                 type="submit"
                 variant="secondary"
                 disabled={isJoining || !joinCode.trim()}
-                className="shrink-0"
+                className="shrink-0 border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold"
               >
                 {isJoining ? (
                   <>
@@ -316,15 +316,15 @@ export default function DashboardPage() {
 
       {/* Feature 3: Past Meetings Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E5DDD5] pb-3 dark:border-[#382721]">
+        <div className="flex items-center justify-between border-b-2 border-[#F0B8C4] pb-3">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#7A625A] dark:text-[#BCAAA4]" />
-              <h2 className="text-xl font-semibold text-[#2A1B18] dark:text-[#F5EFEB]">
+              <Calendar className="h-5 w-5 text-[#800020]" />
+              <h2 className="text-xl font-bold text-[#2B050D]">
                 Past Meetings
               </h2>
               {!isLoadingMeetings && meetings.length > 0 && (
-                <span className="rounded-full bg-[#EFE8E1] px-2.5 py-0.5 text-xs font-semibold text-[#4A3026] dark:bg-[#322019] dark:text-[#EFE8E1]">
+                <span className="rounded-full bg-[#800020] px-2.5 py-0.5 text-xs font-bold text-white">
                   {meetings.length}
                 </span>
               )}
@@ -332,7 +332,7 @@ export default function DashboardPage() {
             <button
               onClick={fetchMeetings}
               disabled={isLoadingMeetings}
-              className="rounded-lg p-1.5 text-[#7A625A] hover:bg-[#EFE8E1] hover:text-[#2A1B18] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] transition-all cursor-pointer dark:hover:bg-[#281A16] dark:text-[#BCAAA4]"
+              className="rounded-xl p-1.5 text-[#800020] hover:bg-[#FFF0F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] transition-all cursor-pointer"
               title="Refresh meetings"
               aria-label="Refresh meetings"
             >
@@ -347,15 +347,15 @@ export default function DashboardPage() {
             {[1, 2, 3].map((n) => (
               <div
                 key={n}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[#E5DDD5] bg-white p-4 dark:border-[#3E2D28] dark:bg-[#231815]"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border-2 border-[#F0B8C4] bg-white p-4"
               >
                 <div className="space-y-2">
-                  <Skeleton className="h-5 w-48 sm:w-80 bg-[#EFE8E1] dark:bg-[#2F211C]" />
-                  <Skeleton className="h-4 w-32 bg-[#EFE8E1] dark:bg-[#2F211C]" />
+                  <Skeleton className="h-5 w-48 sm:w-80 bg-[#FFF0F3]" />
+                  <Skeleton className="h-4 w-32 bg-[#FFF0F3]" />
                 </div>
                 <div className="flex items-center gap-3">
-                  <Skeleton className="h-6 w-20 rounded-full bg-[#EFE8E1] dark:bg-[#2F211C]" />
-                  <Skeleton className="h-8 w-24 rounded-lg bg-[#EFE8E1] dark:bg-[#2F211C]" />
+                  <Skeleton className="h-6 w-20 rounded-full bg-[#FFF0F3]" />
+                  <Skeleton className="h-8 w-24 rounded-lg bg-[#FFF0F3]" />
                 </div>
               </div>
             ))}
@@ -364,14 +364,14 @@ export default function DashboardPage() {
 
         {/* Empty State */}
         {!isLoadingMeetings && meetings.length === 0 && (
-          <Card className="flex flex-col items-center justify-center border-dashed border-[#D7CCC8] py-14 text-center dark:border-[#4A3730]">
-            <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#EFE8E1] text-[#7A625A] dark:bg-[#322019] dark:text-[#BCAAA4]">
+          <Card className="flex flex-col items-center justify-center border-dashed border-2 border-[#F0B8C4] bg-white py-14 text-center">
+            <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]">
               <FolderOpen className="h-6 w-6" />
             </span>
-            <h3 className="text-base font-semibold text-[#2A1B18] dark:text-[#F5EFEB]">
+            <h3 className="text-base font-bold text-[#2B050D]">
               No meetings yet
             </h3>
-            <p className="mt-1 max-w-sm text-sm text-[#7A625A] dark:text-[#BCAAA4]">
+            <p className="mt-1 max-w-sm text-sm font-medium text-[#520919]">
               Create a new meeting or load the sample sync above to generate your first AI meeting summary and action items.
             </p>
           </Card>
@@ -407,23 +407,23 @@ export default function DashboardPage() {
                       handleOpen();
                     }
                   }}
-                  className={`group flex flex-col justify-between gap-4 rounded-xl border border-[#E5DDD5] bg-white p-4 shadow-sm transition-all sm:flex-row sm:items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] dark:border-[#3E2D28] dark:bg-[#231815] ${
+                  className={`group flex flex-col justify-between gap-4 rounded-2xl border-2 border-[#F0B8C4] bg-white p-4 shadow-sm transition-all sm:flex-row sm:items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] ${
                     isReady || isLive || isFailed
-                      ? "cursor-pointer hover:border-[#722F37] hover:shadow-md dark:hover:border-[#9C4B5D]"
+                      ? "cursor-pointer hover:border-[#800020] hover:shadow-md"
                       : ""
                   }`}
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-2.5">
-                      <h4 className="text-base font-semibold text-[#2A1B18] group-hover:text-[#722F37] dark:text-[#F5EFEB] dark:group-hover:text-[#E8A2B0] transition-colors">
+                      <h4 className="text-base font-bold text-[#2B050D] group-hover:text-[#800020] transition-colors">
                         {item.title}
                       </h4>
-                      <span className="font-mono text-xs text-[#5D3D2E] bg-[#EFE8E1] dark:text-[#EFE8E1] dark:bg-[#34221B] px-2 py-0.5 rounded">
+                      <span className="font-mono text-xs font-bold text-[#800020] bg-[#FFF0F3] border border-[#F0B8C4] px-2 py-0.5 rounded-lg">
                         {item.code}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-[#7A625A] dark:text-[#BCAAA4]">
+                    <div className="flex items-center gap-4 text-xs font-medium text-[#800020]/70">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3.5 w-3.5" />
                         {formatDate(item.started_at)}
@@ -442,7 +442,7 @@ export default function DashboardPage() {
                           e.stopPropagation();
                           router.push(`/summary/${encodeURIComponent(item.id)}`);
                         }}
-                        className="text-[#722F37] hover:bg-[#FAF0F2] hover:text-[#5A1827] dark:text-[#E8A2B0] dark:hover:bg-[#361A21]"
+                        className="text-[#800020] hover:bg-[#FFF0F3] font-bold cursor-pointer"
                       >
                         View Summary
                         <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -455,11 +455,11 @@ export default function DashboardPage() {
                         variant="default"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/meeting/${encodeURIComponent(item.code)}`);
+                          router.push(`/meeting/${encodeURIComponent(item.code)}?meetingId=${encodeURIComponent(item.id)}`);
                         }}
-                        className="bg-[#722F37] hover:bg-[#5A1827] text-white"
+                        className="bg-[#800020] hover:bg-[#600018] text-white font-bold cursor-pointer"
                       >
-                        Rejoin
+                        Rejoin Meeting
                         <ArrowRight className="h-3.5 w-3.5 ml-1" />
                       </Button>
                     )}
@@ -472,7 +472,7 @@ export default function DashboardPage() {
                           e.stopPropagation();
                           router.push(`/summary/${encodeURIComponent(item.id)}`);
                         }}
-                        className="border-[#8A2525]/30 text-[#8A2525] hover:bg-[#FDF0F0] dark:text-[#E69393] dark:hover:bg-[#381B1B]"
+                        className="border-[#800020]/40 text-[#800020] hover:bg-[#FFF0F3] cursor-pointer"
                       >
                         Retry
                         <RotateCw className="ml-1 h-3.5 w-3.5" />

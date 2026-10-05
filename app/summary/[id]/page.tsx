@@ -175,7 +175,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
         return (
           <Badge
             variant="outline"
-            className="border-[#722F37]/30 bg-[#FAF0F2] text-[#722F37] dark:bg-[#341B21] dark:text-[#E8A2B0] font-semibold text-[11px]"
+            className="border-[#800020] bg-[#FFF0F3] text-[#800020] font-semibold text-[11px]"
           >
             High
           </Badge>
@@ -184,7 +184,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
         return (
           <Badge
             variant="outline"
-            className="border-[#8C5824]/30 bg-[#FAF2E6] text-[#8C5824] dark:bg-[#342414] dark:text-[#DEAC78] font-semibold text-[11px]"
+            className="border-[#800020]/50 bg-[#FFF5F7] text-[#800020] font-semibold text-[11px]"
           >
             Medium
           </Badge>
@@ -193,7 +193,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
         return (
           <Badge
             variant="outline"
-            className="border-[#4A3026]/20 bg-[#EFE8E1] text-[#4A3026] dark:bg-[#2C1D18] dark:text-[#C5B3AC] font-semibold text-[11px]"
+            className="border-[#F0B8C4] bg-white text-[#520919] font-semibold text-[11px]"
           >
             Low
           </Badge>
@@ -209,59 +209,59 @@ export default function MeetingSummaryPage({ params }: PageProps) {
       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 py-12 text-center">
         <Toaster />
 
-        {/* Central Card with Solid Styling (No Gradients) */}
-        <div className="w-full max-w-lg rounded-2xl border border-[#E5DDD5] bg-white p-8 shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+        {/* Central Card */}
+        <div className="w-full max-w-lg rounded-2xl border border-[#F0B8C4] bg-white p-8 shadow-sm">
           {/* Animated Icon Container */}
-          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#FAF0F2] text-[#722F37] dark:bg-[#361A21] dark:text-[#E8A2B0]">
+          <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#FFF0F3] text-[#800020]">
             <FileText className="h-10 w-10 animate-bounce" />
-            <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#722F37] text-white shadow-sm">
+            <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#800020] text-white shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight text-[#2A1B18] dark:text-[#F5EFEB]">
+          <h2 className="text-2xl font-bold tracking-tight text-[#2B050D]">
             MeetMate is writing your notes…
           </h2>
-          <p className="mt-2 text-sm text-[#7A625A] dark:text-[#BCAAA4]">
+          <p className="mt-2 text-sm text-[#520919]">
             Synthesizing speaker transcripts, extracting consensus decisions, and organizing your action items.
           </p>
 
           {/* Animated Step Indicators */}
           <div className="mt-8 space-y-3 text-left">
-            <div className="flex items-center gap-3 rounded-lg border border-[#E5DDD5] bg-[#FAF8F5] p-3 text-xs dark:border-[#3E2D28] dark:bg-[#1A120E]">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#722F37] text-white">
+            <div className="flex items-center gap-3 rounded-lg border border-[#F0B8C4] bg-[#FFF5F7] p-3 text-xs">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#800020] text-white">
                 <Check className="h-3 w-3" />
               </span>
-              <span className="font-medium text-[#2A1B18] dark:text-[#F5EFEB]">
+              <span className="font-medium text-[#2B050D]">
                 Audio & Web Speech segments transcribed
               </span>
             </div>
 
-            <div className="flex items-center gap-3 rounded-lg border border-[#722F37]/30 bg-[#FAF0F2] p-3 text-xs dark:border-[#722F37]/50 dark:bg-[#361A21]">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#722F37] text-white">
+            <div className="flex items-center gap-3 rounded-lg border border-[#800020]/30 bg-[#FFF0F3] p-3 text-xs">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#800020] text-white">
                 <RotateCw className="h-3 w-3 animate-spin" />
               </span>
-              <span className="font-semibold text-[#722F37] dark:text-[#E8A2B0]">
+              <span className="font-semibold text-[#800020]">
                 Generating TL;DR, decisions & quotes with Gemini…
               </span>
             </div>
 
-            <div className="flex items-center gap-3 rounded-lg border border-dashed border-[#D7CCC8] p-3 text-xs text-[#7A625A] dark:border-[#4A3730] dark:text-[#8D766E]">
-              <span className="h-5 w-5 shrink-0 rounded-full border border-[#D7CCC8] dark:border-[#4A3730]" />
+            <div className="flex items-center gap-3 rounded-lg border border-dashed border-[#F0B8C4] p-3 text-xs text-[#520919]">
+              <span className="h-5 w-5 shrink-0 rounded-full border border-[#F0B8C4]" />
               <span>Grouping action items by participant</span>
             </div>
           </div>
 
           {/* Polling Timer Status */}
-          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#7A625A] dark:text-[#8D766E]">
+          <div className="mt-6 flex items-center justify-center gap-2 text-xs text-[#520919]">
             <Clock className="h-3.5 w-3.5 animate-spin" />
             <span>Polling every 2s • Elapsed: {elapsedSeconds}s (timeout in 90s)</span>
           </div>
 
           {/* Dev Quick Action Pill */}
           {process.env.NEXT_PUBLIC_MOCK === "true" && (
-            <div className="mt-6 border-t border-[#E5DDD5] pt-4 dark:border-[#3E2D28]">
-              <p className="text-[11px] font-medium text-[#7A625A] dark:text-[#8D766E]">
+            <div className="mt-6 border-t border-[#F0B8C4] pt-4">
+              <p className="text-[11px] font-medium text-[#520919]">
                 Mock Mode Controls:
               </p>
               <div className="mt-2 flex justify-center gap-2">
@@ -269,7 +269,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                   size="sm"
                   variant="outline"
                   onClick={() => handleSimulateStatus("ready")}
-                  className="h-7 text-xs border-[#D7CCC8] text-[#722F37] hover:bg-[#FAF0F2]"
+                  className="h-7 text-xs border-[#F0B8C4] text-[#800020] hover:bg-[#FFF0F3]"
                 >
                   Fast-forward to Ready
                 </Button>
@@ -277,7 +277,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                   size="sm"
                   variant="outline"
                   onClick={() => handleSimulateStatus("failed")}
-                  className="h-7 text-xs border-[#D7CCC8] text-[#8A2525] hover:bg-[#FDF0F0]"
+                  className="h-7 text-xs border-[#800020] text-[#800020] hover:bg-[#FFF0F3]"
                 >
                   Test Failed State
                 </Button>
@@ -294,25 +294,25 @@ export default function MeetingSummaryPage({ params }: PageProps) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
         <Toaster />
-        <Card className="w-full max-w-md border border-[#E5DDD5] bg-white p-8 dark:border-[#3E2D28] dark:bg-[#231815]">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FAF2E6] text-[#8C5824] dark:bg-[#342414] dark:text-[#DEAC78]">
+        <Card className="w-full max-w-md border border-[#F0B8C4] bg-white p-8 shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FFF0F3] text-[#800020]">
             <Clock className="h-7 w-7" />
           </div>
-          <CardTitle className="text-xl">Note Generation Timed Out</CardTitle>
-          <CardDescription className="mt-2">
+          <CardTitle className="text-xl text-[#2B050D]">Note Generation Timed Out</CardTitle>
+          <CardDescription className="mt-2 text-[#520919]">
             The notes are taking longer than 90 seconds. The server might still be finalizing the summary.
           </CardDescription>
           <div className="mt-6 flex justify-center gap-3">
             <Button
               variant="outline"
               onClick={() => router.push("/dashboard")}
-              className="border-[#D7CCC8] text-[#2A1B18]"
+              className="border-[#F0B8C4] text-[#800020] hover:bg-[#FFF0F3]"
             >
               Back to Dashboard
             </Button>
             <Button
               onClick={handleRetry}
-              className="bg-[#722F37] text-white hover:bg-[#5A1827]"
+              className="bg-[#800020] text-white hover:bg-[#520919]"
             >
               <RotateCw className="mr-2 h-4 w-4" />
               Retry Now
@@ -328,14 +328,14 @@ export default function MeetingSummaryPage({ params }: PageProps) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
         <Toaster />
-        <Card className="w-full max-w-md border border-[#8A2525]/30 bg-white p-8 dark:border-[#8A2525]/50 dark:bg-[#231815]">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#FDF0F0] text-[#8A2525] dark:bg-[#381B1B] dark:text-[#E69393]">
+        <Card className="w-full max-w-md border border-[#800020]/40 bg-[#FFF0F3] p-8 shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white text-[#800020] border border-[#800020]/20">
             <AlertTriangle className="h-7 w-7" />
           </div>
-          <CardTitle className="text-xl text-[#8A2525] dark:text-[#E69393]">
+          <CardTitle className="text-xl text-[#800020]">
             Summary Generation Failed
           </CardTitle>
-          <CardDescription className="mt-2">
+          <CardDescription className="mt-2 text-[#520919]">
             {errorMessage ||
               "MeetMate encountered an issue while transcribing or generating notes for this meeting."}
           </CardDescription>
@@ -343,13 +343,13 @@ export default function MeetingSummaryPage({ params }: PageProps) {
             <Button
               variant="outline"
               onClick={() => router.push("/dashboard")}
-              className="border-[#D7CCC8] text-[#2A1B18]"
+              className="border-[#800020]/30 text-[#800020] hover:bg-white"
             >
               Back to Dashboard
             </Button>
             <Button
               onClick={handleRetry}
-              className="bg-[#722F37] text-white hover:bg-[#5A1827]"
+              className="bg-[#800020] text-white hover:bg-[#520919]"
             >
               <RotateCw className="mr-2 h-4 w-4" />
               Retry Synthesis
@@ -357,12 +357,12 @@ export default function MeetingSummaryPage({ params }: PageProps) {
           </div>
 
           {process.env.NEXT_PUBLIC_MOCK === "true" && (
-            <div className="mt-6 border-t border-[#E5DDD5] pt-4 dark:border-[#3E2D28]">
+            <div className="mt-6 border-t border-[#800020]/20 pt-4">
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={() => handleSimulateStatus("ready")}
-                className="text-xs text-[#722F37] hover:bg-[#FAF0F2]"
+                className="text-xs text-[#800020] hover:bg-white"
               >
                 Switch to Ready State (Mock)
               </Button>
@@ -404,46 +404,46 @@ export default function MeetingSummaryPage({ params }: PageProps) {
           variant="ghost"
           size="sm"
           onClick={() => router.push("/dashboard")}
-          className="w-fit text-[#6B534B] hover:bg-[#EFE8E1] hover:text-[#2A1B18] -ml-2"
+          className="w-fit text-[#800020] hover:bg-[#FFF0F3] hover:text-[#520919] -ml-2"
         >
           <ArrowLeft className="mr-1.5 h-4 w-4" />
           Back to Dashboard
         </Button>
 
         {/* Small Required Label */}
-        <div className="flex items-center gap-1.5 rounded-full border border-[#D7CCC8] bg-[#FAF8F5] px-3 py-1 text-xs font-medium text-[#7A4B3A] dark:border-[#4A3730] dark:bg-[#201512] dark:text-[#D4A392]">
-          <Sparkles className="h-3.5 w-3.5 text-[#722F37] dark:text-[#E8A2B0]" />
+        <div className="flex items-center gap-1.5 rounded-full border border-[#F0B8C4] bg-[#FFF5F7] px-3 py-1 text-xs font-semibold text-[#800020]">
+          <Sparkles className="h-3.5 w-3.5 text-[#800020]" />
           <span>AI-generated — please verify</span>
         </div>
       </div>
 
       {/* Meeting Header Card */}
-      <Card className="border border-[#E5DDD5] bg-white p-6 shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+      <Card className="border border-[#F0B8C4] bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#2A1B18] dark:text-[#F5EFEB]">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#2B050D]">
                 {meeting.title}
               </h1>
-              <span className="rounded bg-[#EFE8E1] px-2.5 py-0.5 font-mono text-xs font-semibold text-[#5D3D2E] dark:bg-[#34221B] dark:text-[#EFE8E1]">
+              <span className="rounded-md border border-[#F0B8C4] bg-[#FFF0F3] px-2.5 py-0.5 font-mono text-xs font-semibold text-[#800020]">
                 {meeting.code}
               </span>
               <Badge
                 variant="ready"
-                className="bg-[#FAF0F2] text-[#722F37] border-[#722F37]/30"
+                className="bg-[#800020] text-white border-transparent"
               >
                 Ready
               </Badge>
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-[#7A625A] dark:text-[#BCAAA4]">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-[#520919]">
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" />
+                <Calendar className="h-3.5 w-3.5 text-[#800020]" />
                 {formatDate(meeting.started_at)}
               </span>
               <span>•</span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5" />
+                <Clock className="h-3.5 w-3.5 text-[#800020]" />
                 45 mins duration
               </span>
             </div>
@@ -451,16 +451,16 @@ export default function MeetingSummaryPage({ params }: PageProps) {
 
           {/* Participants Avatars */}
           <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold text-[#7A625A] dark:text-[#BCAAA4]">
+            <span className="text-xs font-semibold text-[#520919]">
               Participants ({participants.length}):
             </span>
             <div className="flex flex-wrap gap-1.5">
               {participants.map((p) => (
                 <span
                   key={p.user_id}
-                  className="inline-flex items-center gap-1 rounded-full border border-[#E5DDD5] bg-[#FAF8F5] px-2.5 py-0.5 text-xs text-[#2A1B18] dark:border-[#3E2D28] dark:bg-[#1A120E] dark:text-[#F5EFEB]"
+                  className="inline-flex items-center gap-1 rounded-full border border-[#F0B8C4] bg-[#FFF5F7] px-2.5 py-0.5 text-xs text-[#2B050D]"
                 >
-                  <User className="h-3 w-3 text-[#722F37]" />
+                  <User className="h-3 w-3 text-[#800020]" />
                   {p.display_name}
                 </span>
               ))}
@@ -470,17 +470,17 @@ export default function MeetingSummaryPage({ params }: PageProps) {
 
         {/* Dev Mode Simulation Toggles for Evaluation */}
         {process.env.NEXT_PUBLIC_MOCK === "true" && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#E5DDD5] pt-3 text-xs text-[#7A625A] dark:border-[#3E2D28]">
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[#F0B8C4] pt-3 text-xs text-[#520919]">
             <span className="font-semibold">Simulate Mode:</span>
             <button
               onClick={() => handleSimulateStatus("processing")}
-              className="rounded bg-[#FAF0F2] px-2 py-0.5 text-[#722F37] hover:bg-[#F2DCE1] cursor-pointer"
+              className="rounded-md border border-[#F0B8C4] bg-[#FFF0F3] px-2 py-0.5 text-[#800020] hover:bg-[#F0B8C4]/40 cursor-pointer"
             >
               Test Processing Screen
             </button>
             <button
               onClick={() => handleSimulateStatus("failed")}
-              className="rounded bg-[#FDF0F0] px-2 py-0.5 text-[#8A2525] hover:bg-[#F8D2D2] cursor-pointer"
+              className="rounded-md border border-[#800020]/40 bg-[#FFF0F3] px-2 py-0.5 text-[#800020] hover:bg-[#800020] hover:text-white cursor-pointer"
             >
               Test Failed Screen
             </button>
@@ -490,17 +490,17 @@ export default function MeetingSummaryPage({ params }: PageProps) {
 
       {/* TL;DR Card */}
       {summary && (
-        <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+        <Card className="border border-[#F0B8C4] bg-white shadow-sm">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-[#722F37] dark:text-[#E8A2B0]">
-              <Sparkles className="h-5 w-5" />
-              <CardTitle className="text-lg text-[#722F37] dark:text-[#E8A2B0]">
+            <div className="flex items-center gap-2 text-[#800020]">
+              <Sparkles className="h-5 w-5 text-[#800020]" />
+              <CardTitle className="text-lg text-[#800020]">
                 TL;DR & Executive Summary
               </CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed text-[#2A1B18] dark:text-[#F5EFEB]">
+            <p className="text-sm leading-relaxed text-[#2B050D]">
               {summary.tldr}
             </p>
           </CardContent>
@@ -511,11 +511,11 @@ export default function MeetingSummaryPage({ params }: PageProps) {
       {summary && (
         <div className="grid gap-6 md:grid-cols-2">
           {/* Key Points */}
-          <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+          <Card className="border border-[#F0B8C4] bg-white shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-[#7A4B3A]" />
-                <CardTitle className="text-base font-semibold">
+                <FileText className="h-4 w-4 text-[#800020]" />
+                <CardTitle className="text-base font-semibold text-[#800020]">
                   Key Discussion Points
                 </CardTitle>
               </div>
@@ -524,10 +524,10 @@ export default function MeetingSummaryPage({ params }: PageProps) {
               <ul className="space-y-3">
                 {summary.key_points.map((point, idx) => (
                   <li key={idx} className="flex items-start gap-3 text-sm">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FAF0F2] text-xs font-bold text-[#722F37] dark:bg-[#361A21] dark:text-[#E8A2B0]">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#F0B8C4] bg-[#FFF0F3] text-xs font-bold text-[#800020]">
                       {idx + 1}
                     </span>
-                    <span className="text-[#2A1B18] dark:text-[#F5EFEB] leading-relaxed">
+                    <span className="text-[#2B050D] leading-relaxed">
                       {point}
                     </span>
                   </li>
@@ -539,11 +539,11 @@ export default function MeetingSummaryPage({ params }: PageProps) {
           {/* Decisions & Open Questions */}
           <div className="space-y-6">
             {/* Decisions */}
-            <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+            <Card className="border border-[#F0B8C4] bg-white shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#722F37] dark:text-[#E8A2B0]" />
-                  <CardTitle className="text-base font-semibold text-[#722F37] dark:text-[#E8A2B0]">
+                  <CheckCircle2 className="h-4 w-4 text-[#800020]" />
+                  <CardTitle className="text-base font-semibold text-[#800020]">
                     Decisions Reached
                   </CardTitle>
                 </div>
@@ -552,8 +552,8 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                 <ul className="space-y-2.5">
                   {summary.decisions.map((dec, idx) => (
                     <li key={idx} className="flex items-start gap-2.5 text-sm">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#722F37] dark:text-[#E8A2B0]" />
-                      <span className="text-[#2A1B18] dark:text-[#F5EFEB]">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#800020]" />
+                      <span className="text-[#2B050D]">
                         {dec}
                       </span>
                     </li>
@@ -563,11 +563,11 @@ export default function MeetingSummaryPage({ params }: PageProps) {
             </Card>
 
             {/* Open Questions */}
-            <Card className="border border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]">
+            <Card className="border border-[#F0B8C4] bg-white shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-[#8C5824] dark:text-[#DEAC78]" />
-                  <CardTitle className="text-base font-semibold text-[#8C5824] dark:text-[#DEAC78]">
+                  <HelpCircle className="h-4 w-4 text-[#800020]" />
+                  <CardTitle className="text-base font-semibold text-[#800020]">
                     Open Questions
                   </CardTitle>
                 </div>
@@ -576,8 +576,8 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                 <ul className="space-y-2.5">
                   {summary.open_questions.map((q, idx) => (
                     <li key={idx} className="flex items-start gap-2.5 text-sm">
-                      <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#8C5824] dark:text-[#DEAC78]" />
-                      <span className="text-[#2A1B18] dark:text-[#F5EFEB]">
+                      <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#800020]" />
+                      <span className="text-[#2B050D]">
                         {q}
                       </span>
                     </li>
@@ -591,11 +591,11 @@ export default function MeetingSummaryPage({ params }: PageProps) {
 
       {/* Action Items Section Grouped by Owner */}
       <div className="space-y-4">
-        <div className="border-b border-[#E5DDD5] pb-3 dark:border-[#382721]">
-          <h2 className="text-xl font-bold text-[#2A1B18] dark:text-[#F5EFEB]">
+        <div className="border-b border-[#F0B8C4] pb-3">
+          <h2 className="text-xl font-bold text-[#2B050D]">
             Action Items & Deliverables
           </h2>
-          <p className="text-xs text-[#7A625A] dark:text-[#BCAAA4]">
+          <p className="text-xs text-[#520919]">
             Extracted commitments grouped by assignee with exact transcript quotes and timestamps.
           </p>
         </div>
@@ -609,48 +609,20 @@ export default function MeetingSummaryPage({ params }: PageProps) {
             return (
               <div
                 key={owner}
-                className={`overflow-hidden rounded-xl border transition-all ${
-                  isUnassigned
-                    ? "border-amber-300/80 bg-[#FFFDF5] shadow-sm dark:border-amber-700/60 dark:bg-[#261E10]"
-                    : "border-[#E5DDD5] bg-white shadow-sm dark:border-[#3E2D28] dark:bg-[#231815]"
-                }`}
+                className="overflow-hidden rounded-xl border border-[#F0B8C4] bg-white shadow-sm"
               >
                 {/* Group Header */}
-                <div
-                  className={`flex items-center justify-between border-b px-4 py-3 sm:px-6 ${
-                    isUnassigned
-                      ? "border-amber-200/80 bg-amber-50/80 dark:border-amber-800/60 dark:bg-amber-950/40"
-                      : "border-[#F0EAE3] bg-[#FAF8F5] dark:border-[#33221B] dark:bg-[#1E1410]"
-                  }`}
-                >
+                <div className="flex items-center justify-between border-b border-[#F0B8C4] bg-[#FFF5F7] px-4 py-3 sm:px-6">
                   <div className="flex items-center gap-2.5">
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                        isUnassigned
-                          ? "bg-amber-200 text-amber-900 dark:bg-amber-800 dark:text-amber-100"
-                          : "bg-[#722F37] text-white"
-                      }`}
-                    >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#800020] text-xs font-bold text-white">
                       {isUnassigned ? "?" : owner.slice(0, 2).toUpperCase()}
                     </span>
-                    <h3
-                      className={`text-sm font-bold ${
-                        isUnassigned
-                          ? "text-amber-900 dark:text-amber-200"
-                          : "text-[#2A1B18] dark:text-[#F5EFEB]"
-                      }`}
-                    >
+                    <h3 className="text-sm font-bold text-[#2B050D]">
                       {owner}
                     </h3>
                   </div>
 
-                  <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      isUnassigned
-                        ? "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/60 dark:text-amber-200"
-                        : "bg-[#EFE8E1] text-[#4A3026] dark:bg-[#2F211C] dark:text-[#EFE8E1]"
-                    }`}
-                  >
+                  <span className="rounded-full border border-[#F0B8C4] bg-[#FFF0F3] px-2.5 py-0.5 text-xs font-semibold text-[#800020]">
                     {isUnassigned
                       ? "Needs Assignment (1 item)"
                       : `${items.length} ${items.length === 1 ? "task" : "tasks"}`}
@@ -660,7 +632,7 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                 {/* Table for Desktop / Large Screens */}
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="border-b border-[#F0EAE3] text-xs font-semibold uppercase text-[#7A625A] dark:border-[#33221B] dark:text-[#BCAAA4]">
+                    <thead className="border-b border-[#F0B8C4] text-xs font-semibold uppercase text-[#520919] bg-[#FFF5F7]">
                       <tr>
                         <th className="px-6 py-3">Deliverable & Source Quote</th>
                         <th className="px-4 py-3">Due Date</th>
@@ -668,34 +640,34 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                         <th className="px-6 py-3 text-right">Timestamp</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#F0EAE3] dark:divide-[#33221B]">
+                    <tbody className="divide-y divide-[#FFF0F3]">
                       {items.map((item) => (
                         <tr
                           key={item.id}
-                          className="hover:bg-[#FAF8F5] dark:hover:bg-[#1E1410] transition-colors"
+                          className="hover:bg-[#FFF5F7] transition-colors"
                         >
                           {/* Title & Quote */}
                           <td className="px-6 py-4">
-                            <div className="font-semibold text-[#2A1B18] dark:text-[#F5EFEB]">
+                            <div className="font-semibold text-[#2B050D]">
                               {item.title}
                             </div>
                             {item.source_quote && (
-                              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[#7A625A] dark:text-[#BCAAA4] italic">
-                                <Quote className="h-3 w-3 shrink-0 text-[#722F37] mt-0.5" />
+                              <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[#520919] italic">
+                                <Quote className="h-3 w-3 shrink-0 text-[#800020] mt-0.5" />
                                 <span>&ldquo;{item.source_quote}&rdquo;</span>
                               </div>
                             )}
                           </td>
 
                           {/* Due Date */}
-                          <td className="px-4 py-4 whitespace-nowrap text-xs text-[#7A625A] dark:text-[#BCAAA4]">
+                          <td className="px-4 py-4 whitespace-nowrap text-xs text-[#520919]">
                             {item.due_date ? (
                               <span className="flex items-center gap-1 font-medium">
-                                <Calendar className="h-3.5 w-3.5" />
+                                <Calendar className="h-3.5 w-3.5 text-[#800020]" />
                                 {item.due_date}
                               </span>
                             ) : (
-                              <span className="italic text-[#A8968F]">
+                              <span className="italic text-[#800020]/60">
                                 No date
                               </span>
                             )}
@@ -708,8 +680,8 @@ export default function MeetingSummaryPage({ params }: PageProps) {
 
                           {/* Timestamp */}
                           <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="inline-flex items-center gap-1 rounded bg-[#EFE8E1] px-2 py-0.5 font-mono text-xs font-semibold text-[#5D3D2E] dark:bg-[#34221B] dark:text-[#EFE8E1]">
-                              <Clock className="h-3 w-3" />
+                            <span className="inline-flex items-center gap-1 rounded-md border border-[#F0B8C4] bg-[#FFF0F3] px-2 py-0.5 font-mono text-xs font-semibold text-[#800020]">
+                              <Clock className="h-3 w-3 text-[#800020]" />
                               {formatTimestamp(item.t_ms)}
                             </span>
                           </td>
@@ -720,33 +692,33 @@ export default function MeetingSummaryPage({ params }: PageProps) {
                 </div>
 
                 {/* Card Stack for Mobile Phone Width (< 768px) */}
-                <div className="block md:hidden divide-y divide-[#F0EAE3] dark:divide-[#33221B]">
+                <div className="block md:hidden divide-y divide-[#FFF0F3]">
                   {items.map((item) => (
                     <div key={item.id} className="p-4 space-y-2.5">
                       <div className="flex items-start justify-between gap-2">
-                        <h4 className="text-sm font-semibold text-[#2A1B18] dark:text-[#F5EFEB]">
+                        <h4 className="text-sm font-semibold text-[#2B050D]">
                           {item.title}
                         </h4>
                         {renderPriorityBadge(item.priority)}
                       </div>
 
                       {item.source_quote && (
-                        <div className="rounded-lg bg-[#FAF8F5] p-2.5 text-xs text-[#7A625A] italic dark:bg-[#1A120E] dark:text-[#BCAAA4]">
+                        <div className="rounded-lg border border-[#F0B8C4] bg-[#FFF5F7] p-2.5 text-xs text-[#520919] italic">
                           <div className="flex items-start gap-1.5">
-                            <Quote className="h-3 w-3 shrink-0 text-[#722F37] mt-0.5" />
+                            <Quote className="h-3 w-3 shrink-0 text-[#800020] mt-0.5" />
                             <span>&ldquo;{item.source_quote}&rdquo;</span>
                           </div>
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between text-xs text-[#7A625A] dark:text-[#BCAAA4] pt-1">
+                      <div className="flex items-center justify-between text-xs text-[#520919] pt-1">
                         <span className="flex items-center gap-1">
-                          <Calendar className="h-3.5 w-3.5" />
+                          <Calendar className="h-3.5 w-3.5 text-[#800020]" />
                           {item.due_date || "No due date"}
                         </span>
 
-                        <span className="inline-flex items-center gap-1 rounded bg-[#EFE8E1] px-2 py-0.5 font-mono text-[11px] font-semibold text-[#5D3D2E] dark:bg-[#34221B] dark:text-[#EFE8E1]">
-                          <Clock className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 rounded-md border border-[#F0B8C4] bg-[#FFF0F3] px-2 py-0.5 font-mono text-[11px] font-semibold text-[#800020]">
+                          <Clock className="h-3 w-3 text-[#800020]" />
                           {formatTimestamp(item.t_ms)}
                         </span>
                       </div>

@@ -1,8 +1,522 @@
-AuraCoders
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuraCoders — MeetMate Engineering Team</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --burgundy-950: #1a0307;
+      --burgundy-900: #2b050d;
+      --burgundy-850: #3d0713;
+      --burgundy-800: #520919;
+      --burgundy-700: #6b0c21;
+      --burgundy-600: #800020; /* Pure Classic Burgundy */
+      --burgundy-500: #9c0e2e;
+      --burgundy-400: #ba193d;
+      --burgundy-300: #d64765;
+      --burgundy-200: #ea8ea2;
+      --burgundy-100: #f7cbd4;
+      --burgundy-50: #fff0f3;
+      
+      --white: #ffffff;
+      --white-soft: #faf5f7;
+      --border-burgundy: rgba(128, 0, 32, 0.18);
+      --border-burgundy-light: rgba(128, 0, 32, 0.08);
+      --shadow-burgundy: rgba(128, 0, 32, 0.12);
+    }
 
-1.Sachin KAS
-2.Sudharsan S
-3.Thansha
-4.Supriya
-5.Rithanya
-n
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background-color: var(--white);
+      color: var(--burgundy-950);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.6;
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(128, 0, 32, 0.04) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(128, 0, 32, 0.05) 0%, transparent 45%);
+    }
+
+    /* Top Banner */
+    .top-bar {
+      background-color: var(--burgundy-600);
+      color: var(--white);
+      padding: 10px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: center;
+      box-shadow: 0 2px 10px rgba(128, 0, 32, 0.2);
+    }
+
+    /* Navigation */
+    nav {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-burgundy);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--burgundy-600);
+    }
+
+    .brand-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--burgundy-600);
+      color: var(--white);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 20px;
+      box-shadow: 0 4px 14px var(--shadow-burgundy);
+    }
+
+    .brand-text {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--burgundy-900);
+    }
+
+    .brand-text span {
+      color: var(--burgundy-600);
+    }
+
+    .badge-capsule {
+      background-color: var(--burgundy-50);
+      color: var(--burgundy-600);
+      border: 1px solid var(--border-burgundy);
+      padding: 6px 16px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    /* Hero Section */
+    .hero {
+      max-width: 1200px;
+      margin: 60px auto 40px;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: var(--burgundy-50);
+      border: 1px solid var(--border-burgundy);
+      color: var(--burgundy-600);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(40px, 6vw, 68px);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--burgundy-900);
+      margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--burgundy-600);
+    }
+
+    .hero p {
+      max-width: 640px;
+      margin: 0 auto 36px;
+      font-size: 18px;
+      color: var(--burgundy-800);
+      font-weight: 400;
+    }
+
+    /* Actions */
+    .cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+
+    .btn-burgundy {
+      background-color: var(--burgundy-600);
+      color: var(--white);
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 18px rgba(128, 0, 32, 0.25);
+      border: 2px solid var(--burgundy-600);
+      cursor: pointer;
+    }
+
+    .btn-burgundy:hover {
+      background-color: var(--burgundy-700);
+      border-color: var(--burgundy-700);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(128, 0, 32, 0.35);
+    }
+
+    .btn-outline {
+      background-color: var(--white);
+      color: var(--burgundy-600);
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      border: 2px solid var(--burgundy-600);
+      cursor: pointer;
+    }
+
+    .btn-outline:hover {
+      background-color: var(--burgundy-50);
+      transform: translateY(-2px);
+    }
+
+    /* Team Members Section */
+    .team-section {
+      max-width: 1200px;
+      margin: 40px auto 80px;
+      padding: 0 24px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .section-header h2 {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--burgundy-900);
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+    }
+
+    .section-header p {
+      color: var(--burgundy-700);
+      font-size: 16px;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+    }
+
+    .member-card {
+      background: var(--white);
+      border: 2px solid var(--border-burgundy);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px var(--shadow-burgundy);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .member-card:hover {
+      transform: translateY(-6px);
+      border-color: var(--burgundy-600);
+      box-shadow: 0 12px 30px rgba(128, 0, 32, 0.18);
+    }
+
+    .member-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: var(--burgundy-600);
+    }
+
+    .avatar {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      background: var(--burgundy-600);
+      color: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 800;
+      margin: 0 auto 20px;
+      border: 4px solid var(--burgundy-50);
+      box-shadow: 0 4px 12px rgba(128, 0, 32, 0.25);
+    }
+
+    .member-number {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--burgundy-500);
+      margin-bottom: 6px;
+    }
+
+    .member-name {
+      font-size: 19px;
+      font-weight: 700;
+      color: var(--burgundy-900);
+      margin-bottom: 6px;
+    }
+
+    .member-role {
+      font-size: 13px;
+      color: var(--burgundy-700);
+      font-weight: 500;
+      background: var(--burgundy-50);
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-burgundy-light);
+    }
+
+    /* Product Feature Box */
+    .feature-box {
+      max-width: 1200px;
+      margin: 0 auto 100px;
+      padding: 0 24px;
+    }
+
+    .feature-card {
+      background: var(--burgundy-600);
+      color: var(--white);
+      border-radius: 28px;
+      padding: 56px 48px;
+      box-shadow: 0 20px 50px rgba(128, 0, 32, 0.28);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    @media (max-width: 860px) {
+      .feature-card {
+        grid-template-columns: 1fr;
+        padding: 36px 24px;
+      }
+    }
+
+    .feature-content h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .feature-content p {
+      font-size: 16px;
+      color: var(--burgundy-100);
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+
+    .feature-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .stat-item {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--burgundy-100);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-burgundy);
+      background: var(--burgundy-50);
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    footer p {
+      font-size: 14px;
+      color: var(--burgundy-800);
+      font-weight: 600;
+    }
+
+    footer p span {
+      color: var(--burgundy-600);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="top-bar">
+    AuraCoders Project · MeetMate Real-Time Video &amp; AI Intelligence
+  </div>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="#" class="brand">
+      <div class="brand-icon">A</div>
+      <div class="brand-text">Aura<span>Coders</span></div>
+    </a>
+    <div class="badge-capsule">White &amp; Burgundy Edition</div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">
+      Innovating at Full Speed
+    </div>
+    <h1>Meet <em>AuraCoders</em> &amp; MeetMate</h1>
+    <p>
+      An elite team crafting state-of-the-art real-time video conferencing, automated transcription, and AI-powered meeting synthesis.
+    </p>
+    <div class="cta-row">
+      <a href="/dashboard" class="btn-burgundy">Open MeetMate Dashboard</a>
+      <a href="#team" class="btn-outline">Meet The Team</a>
+    </div>
+  </section>
+
+  <!-- Team Grid -->
+  <section class="team-section" id="team">
+    <div class="section-header">
+      <h2>The AuraCoders Team</h2>
+      <p>Five dedicated engineers building the future of intelligent meetings</p>
+    </div>
+
+    <div class="team-grid">
+      <!-- Member 1: Sachin KAS -->
+      <div class="member-card">
+        <div class="avatar">S</div>
+        <div class="member-number">Member #01</div>
+        <div class="member-name">Sachin KAS</div>
+        <div class="member-role">Lead Engineer</div>
+      </div>
+
+      <!-- Member 2: Sudharsan S -->
+      <div class="member-card">
+        <div class="avatar">S</div>
+        <div class="member-number">Member #02</div>
+        <div class="member-name">Sudharsan S</div>
+        <div class="member-role">Core Systems</div>
+      </div>
+
+      <!-- Member 3: Thansha -->
+      <div class="member-card">
+        <div class="avatar">T</div>
+        <div class="member-number">Member #03</div>
+        <div class="member-name">Thansha</div>
+        <div class="member-role">Frontend &amp; AI</div>
+      </div>
+
+      <!-- Member 4: Supriya -->
+      <div class="member-card">
+        <div class="avatar">S</div>
+        <div class="member-number">Member #04</div>
+        <div class="member-name">Supriya</div>
+        <div class="member-role">Full-Stack Dev</div>
+      </div>
+
+      <!-- Member 5: Rithanya -->
+      <div class="member-card">
+        <div class="avatar">R</div>
+        <div class="member-number">Member #05</div>
+        <div class="member-name">Rithanya</div>
+        <div class="member-role">Product &amp; UI/UX</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Feature Card -->
+  <section class="feature-box">
+    <div class="feature-card">
+      <div class="feature-content">
+        <h3>Powered by LiveKit &amp; AI</h3>
+        <p>
+          MeetMate features zero-latency WebRTC live conferencing, browser-level voice transcription, autonomous task extraction, and instant executive meeting summaries.
+        </p>
+        <a href="/dashboard" class="btn-outline" style="background: var(--white); color: var(--burgundy-600); border: none;">Launch Application</a>
+      </div>
+      <div class="feature-stats">
+        <div class="stat-item">
+          <div class="stat-number">5</div>
+          <div class="stat-label">Engineers</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">White &amp; Burgundy</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">LiveKit</div>
+          <div class="stat-label">Cloud WebRTC</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">AI</div>
+          <div class="stat-label">Assistant Copilot</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2026 <span>AuraCoders</span>. All rights reserved. Exclusively styled in White &amp; Burgundy.</p>
+  </footer>
+
+</body>
+</html>

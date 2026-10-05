@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useChat } from "@livekit/components-react";
+import { Send, MessageSquare } from "lucide-react";
 
 type ChatPanelProps = {
   roomKey?: string;
@@ -59,24 +60,31 @@ export default function ChatPanel({ roomKey = "demo", senderName = "Guest", mock
   }
 
   return (
-    <section className="flex h-full min-h-64 flex-col rounded-xl border border-slate-700 bg-slate-900" aria-label="Meeting chat">
-      <h2 className="border-b border-slate-700 px-4 py-3 text-sm font-semibold">In-call chat</h2>
+    <section className="flex h-full min-h-64 flex-col rounded-2xl border-2 border-[#800020]/25 bg-white shadow-md" aria-label="Meeting chat">
+      <header className="flex items-center gap-2 border-b-2 border-[#800020]/15 bg-[#FFF0F3] px-4 py-3">
+        <MessageSquare className="h-4 w-4 text-[#800020]" />
+        <h2 className="text-sm font-bold text-[#800020]">Meeting Chat</h2>
+      </header>
       <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto p-4" aria-live="polite">
-        {messages.length === 0 && <p className="text-sm text-slate-500">Messages in this meeting appear here.</p>}
+        {messages.length === 0 && (
+          <p className="text-center text-xs font-medium text-[#800020]/60 py-6">
+            No messages yet. Send a message to everyone in the room.
+          </p>
+        )}
         {mockMode ? demoMessages.map((message) => (
-          <article key={message.id} className="text-sm">
-            <p className="mb-1 text-xs font-semibold text-indigo-300">{message.senderName}</p>
-            <p className="break-words text-slate-100">{message.message}</p>
+          <article key={message.id} className="rounded-xl border border-[#F0B8C4] bg-[#FFF5F7] p-2.5 text-sm">
+            <p className="mb-0.5 text-xs font-bold text-[#800020]">{message.senderName}</p>
+            <p className="break-words text-[#2B050D] text-xs leading-5">{message.message}</p>
           </article>
         )) : chatMessages.map((message) => (
-          <article key={`${message.timestamp}-${message.from?.identity}-${message.message}`} className="text-sm">
-            <p className="mb-1 text-xs font-semibold text-indigo-300">{message.from?.name || message.from?.identity || "Participant"}</p>
-            <p className="break-words text-slate-100">{message.message}</p>
+          <article key={`${message.timestamp}-${message.from?.identity}-${message.message}`} className="rounded-xl border border-[#F0B8C4] bg-[#FFF5F7] p-2.5 text-sm">
+            <p className="mb-0.5 text-xs font-bold text-[#800020]">{message.from?.name || message.from?.identity || "Participant"}</p>
+            <p className="break-words text-[#2B050D] text-xs leading-5">{message.message}</p>
           </article>
         ))}
       </div>
-      {error && <p className="px-4 pb-2 text-xs text-red-300" role="alert">{error}</p>}
-      <form onSubmit={submit} className="flex gap-2 border-t border-slate-700 p-3">
+      {error && <p className="px-4 pb-2 text-xs font-semibold text-[#9C0E2E]" role="alert">{error}</p>}
+      <form onSubmit={submit} className="flex gap-2 border-t-2 border-[#800020]/15 bg-[#FFF0F3] p-3">
         <label className="sr-only" htmlFor="meeting-chat-input">Write a chat message</label>
         <input
           id="meeting-chat-input"
@@ -84,9 +92,14 @@ export default function ChatPanel({ roomKey = "demo", senderName = "Guest", mock
           onChange={(event) => setDraft(event.target.value)}
           maxLength={2000}
           placeholder="Write a message…"
-          className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none focus:border-indigo-400"
+          className="min-w-0 flex-1 rounded-xl border border-[#F0B8C4] bg-white px-3 py-2 text-xs font-medium text-[#2B050D] outline-none placeholder:text-[#800020]/40 focus:border-[#800020]"
         />
-        <button disabled={!draft.trim() || isSending} className="rounded-lg bg-indigo-500 px-3 py-2 text-sm font-medium disabled:opacity-40">Send</button>
+        <button
+          disabled={!draft.trim() || isSending}
+          className="flex items-center justify-center rounded-xl bg-[#800020] px-3.5 py-2 text-xs font-bold text-white transition hover:bg-[#600018] disabled:opacity-40 cursor-pointer"
+        >
+          <Send className="h-3.5 w-3.5" />
+        </button>
       </form>
     </section>
   );

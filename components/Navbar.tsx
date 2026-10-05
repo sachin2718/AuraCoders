@@ -1,6 +1,6 @@
 /**
  * components/Navbar.tsx
- * Top navigation bar — responsive with hamburger menu on mobile.
+ * Top navigation bar — styled exclusively in White & Burgundy.
  */
 
 "use client";
@@ -49,7 +49,7 @@ export default function Navbar() {
       }
     );
     return () => sub?.subscription?.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   // Close user dropdown on Escape or outside click
   useEffect(() => {
@@ -90,19 +90,19 @@ export default function Navbar() {
     user?.user_metadata?.display_name ?? user?.email?.split("@")[0] ?? "User";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[#E5DDD5] bg-white dark:border-[#382721] dark:bg-[#1C120F]">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6">
+    <header className="sticky top-0 z-50 w-full border-b border-[#F0B8C4] bg-white">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:px-6">
         {/* Logo */}
         <Link
           href="/dashboard"
-          className="flex shrink-0 items-center gap-2 rounded-lg p-1 font-semibold text-[#2A1B18] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] dark:text-[#F5EFEB]"
+          className="flex shrink-0 items-center gap-2.5 rounded-xl p-1 font-semibold text-[#2B050D] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020]"
           aria-label="MeetMate Home"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#722F37] text-white shadow-sm">
-            <Video size={16} strokeWidth={2.2} />
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#800020] text-white shadow-md shadow-[#800020]/20">
+            <Video size={18} strokeWidth={2.4} />
           </span>
-          <span className="text-base font-bold tracking-tight">
-            Meet<span className="text-[#722F37] dark:text-[#D97D8E]">Mate</span>
+          <span className="text-lg font-extrabold tracking-tight text-[#2B050D]">
+            Meet<span className="text-[#800020]">Mate</span>
           </span>
         </Link>
 
@@ -115,31 +115,31 @@ export default function Navbar() {
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37]",
+                  "flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020]",
                   isActive
-                    ? "bg-[#FAF0F2] text-[#722F37] font-semibold dark:bg-[#361A21] dark:text-[#E8A2B0]"
-                    : "text-[#6B534B] hover:bg-[#F2ECE6] hover:text-[#2A1B18] dark:text-[#C5B3AC] dark:hover:bg-[#281A16] dark:hover:text-white"
+                    ? "bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4] shadow-sm"
+                    : "text-[#520919] hover:bg-[#FFF0F3] hover:text-[#800020]"
                 )}
               >
-                <Icon size={15} />
+                <Icon size={16} />
                 <span>{label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* Desktop user menu */}
           {user ? (
             <div className="relative hidden sm:block" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center gap-2 rounded-lg p-1.5 text-sm font-medium text-[#2A1B18] transition-colors hover:bg-[#F2ECE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] dark:text-[#F5EFEB] dark:hover:bg-[#281A16] cursor-pointer"
+                className="flex items-center gap-2 rounded-xl border border-[#F0B8C4] p-1.5 pr-2.5 text-sm font-semibold text-[#2B050D] transition-colors hover:bg-[#FFF0F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] cursor-pointer"
                 aria-expanded={menuOpen}
                 aria-haspopup="true"
                 id="user-menu-btn"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EFE8E1] text-xs font-bold text-[#722F37] dark:bg-[#341B21] dark:text-[#E8A2B0]">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#800020] text-xs font-bold text-white shadow-sm">
                   {initials}
                 </span>
                 <span className="hidden max-w-[120px] truncate md:block">
@@ -148,29 +148,29 @@ export default function Navbar() {
                 <ChevronDown
                   size={14}
                   className={cn(
-                    "transition-transform duration-200 text-[#7A625A]",
+                    "transition-transform duration-200 text-[#800020]",
                     menuOpen && "rotate-180"
                   )}
                 />
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 z-50 mt-1 w-56 overflow-hidden rounded-xl border border-[#E5DDD5] bg-white shadow-md dark:border-[#3E2D28] dark:bg-[#231815]">
-                  <div className="border-b border-[#F0EAE3] px-4 py-3 dark:border-[#382721]">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[#7A625A] dark:text-[#BCAAA4]">
+                <div className="absolute right-0 z-50 mt-2 w-60 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-xl shadow-[#800020]/10">
+                  <div className="border-b border-[#F0B8C4] bg-[#FFF0F3] px-4 py-3">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#800020]">
                       Signed in as
                     </p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-[#2A1B18] dark:text-white">
+                    <p className="mt-0.5 truncate text-sm font-semibold text-[#2B050D]">
                       {user.email}
                     </p>
                   </div>
-                  <div className="p-1">
+                  <div className="p-2">
                     <button
                       onClick={signOut}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[#8A2525] transition-colors hover:bg-[#FDF0F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8A2525] dark:text-[#E69393] dark:hover:bg-[#381B1B] cursor-pointer"
+                      className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold text-[#9C0E2E] transition-colors hover:bg-[#FFF0F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] cursor-pointer"
                       id="sign-out-btn"
                     >
-                      <LogOut size={14} />
+                      <LogOut size={16} />
                       Sign out
                     </button>
                   </div>
@@ -180,7 +180,7 @@ export default function Navbar() {
           ) : (
             <Link
               href="/login"
-              className="hidden rounded-lg bg-[#722F37] px-3.5 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#5A1827] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] sm:block"
+              className="hidden rounded-xl bg-[#800020] px-4 py-2 text-sm font-bold text-white shadow-sm transition-all hover:bg-[#600018] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] sm:block"
             >
               Sign in
             </Link>
@@ -189,7 +189,7 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen((o) => !o)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[#2A1B18] transition-colors hover:bg-[#F2ECE6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] dark:text-[#F5EFEB] dark:hover:bg-[#281A16] sm:hidden cursor-pointer"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#F0B8C4] text-[#800020] transition-colors hover:bg-[#FFF0F3] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#800020] sm:hidden cursor-pointer"
             aria-expanded={mobileOpen}
             aria-label="Open menu"
           >
@@ -200,8 +200,8 @@ export default function Navbar() {
 
       {/* Mobile menu drawer */}
       {mobileOpen && (
-        <div className="border-t border-[#E5DDD5] bg-white px-4 pb-4 pt-2 dark:border-[#382721] dark:bg-[#1C120F] sm:hidden">
-          <nav className="flex flex-col gap-1">
+        <div className="border-t border-[#F0B8C4] bg-white px-4 pb-4 pt-2 sm:hidden">
+          <nav className="flex flex-col gap-1.5">
             {NAV_LINKS.map(({ href, label, icon: Icon }) => {
               const isActive = pathname.startsWith(href);
               return (
@@ -209,50 +209,35 @@ export default function Navbar() {
                   key={href}
                   href={href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                    "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all",
                     isActive
-                      ? "bg-[#FAF0F2] text-[#722F37] font-semibold dark:bg-[#361A21] dark:text-[#E8A2B0]"
-                      : "text-[#6B534B] hover:bg-[#F2ECE6] hover:text-[#2A1B18] dark:text-[#C5B3AC] dark:hover:bg-[#281A16] dark:hover:text-white"
+                      ? "bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]"
+                      : "text-[#520919] hover:bg-[#FFF0F3] hover:text-[#800020]"
                   )}
                 >
-                  <Icon size={17} />
+                  <Icon size={18} />
                   {label}
                 </Link>
               );
             })}
-          </nav>
 
-          {user ? (
-            <div className="mt-3 border-t border-[#F0EAE3] pt-3 dark:border-[#382721]">
-              <div className="mb-2 flex items-center gap-3 px-3 py-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EFE8E1] text-xs font-bold text-[#722F37] dark:bg-[#341B21] dark:text-[#E8A2B0]">
-                  {initials}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#2A1B18] dark:text-white">
-                    {displayName}
-                  </p>
-                  <p className="truncate text-xs text-[#7A625A] dark:text-[#BCAAA4]">
-                    {user.email}
-                  </p>
-                </div>
-              </div>
+            {user ? (
               <button
                 onClick={signOut}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-[#8A2525] transition-colors hover:bg-[#FDF0F0] dark:text-[#E69393] dark:hover:bg-[#381B1B] cursor-pointer"
+                className="mt-2 flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold text-[#9C0E2E] transition-colors hover:bg-[#FFF0F3]"
               >
-                <LogOut size={15} />
+                <LogOut size={18} />
                 Sign out
               </button>
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="mt-3 flex w-full items-center justify-center rounded-lg bg-[#722F37] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#5A1827]"
-            >
-              Sign in
-            </Link>
-          )}
+            ) : (
+              <Link
+                href="/login"
+                className="mt-2 flex items-center justify-center rounded-xl bg-[#800020] py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#600018]"
+              >
+                Sign in
+              </Link>
+            )}
+          </nav>
         </div>
       )}
     </header>
