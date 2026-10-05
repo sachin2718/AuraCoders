@@ -1,30 +1,21 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient, isSupabaseConfigured } from "./supabase";
 
 export type LiveKitCredentials = { token: string; url: string };
 export type MeetingUser = { id: string | null; displayName: string };
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.");
-  }
-  return createClient(supabaseUrl, supabaseAnonKey);
-}
 
 export async function getSignedInDisplayName(localName?: string): Promise<string> {
   return (await getMeetingUser(localName)).displayName;
 }
 
 export async function getMeetingUser(localName?: string, suppliedUserId?: string): Promise<MeetingUser> {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!isSupabaseConfigured()) {
     return {
       id: suppliedUserId?.trim() || null,
       displayName: localName?.trim() || `Guest-${Math.floor(Math.random() * 900) + 100}`,
     };
   }
 
-  const { data: { user }, error } = await getSupabaseClient().auth.getUser();
+  const { data: { user }, error } = await createBrowserClient().auth.getUser();
   if (error) throw new Error(`Could not read the signed-in user: ${error.message}`);
   if (!user) throw new Error("Sign in before joining this meeting.");
 
@@ -44,6 +35,22 @@ export async function getLiveKitCredentials(code: string, displayName: string): 
       throw new Error("Set NEXT_PUBLIC_LIVEKIT_URL to use the development ?token= override.");
     }
     return { token: developmentToken, url: developmentUrl };
+  }
+
+  // A public dev token is useful for local LiveKit testing when the server
+  // token route has not been configured yet. Never use this path in a
+  // production build; server-signed tokens are required there.
+  if (process.env.NODE_ENV !== "production") {
+    const configuredDevToken = process.env.NEXT_PUBLIC_DEV_LIVEKIT_TOKEN;
+    if (configuredDevToken && developmentUrl && !configuredDevToken.startsWith("mock-")) {
+      const tokens = parseDevelopmentTokens(configuredDevToken);
+      const requestedIndex = new URLSearchParams(window.location.search).get("devTokenIndex");
+      const tokenIndex = requestedIndex === null ? 0 : Number(requestedIndex);
+      if (!Number.isInteger(tokenIndex) || tokenIndex < 0 || tokenIndex >= tokens.length) {
+        throw new Error(`devTokenIndex must be an integer from 0 to ${tokens.length - 1}.`);
+      }
+      return { token: tokens[tokenIndex], url: developmentUrl };
+    }
   }
 
   const response = await fetch("/api/livekit-token", {

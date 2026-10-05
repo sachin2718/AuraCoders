@@ -32,7 +32,7 @@ export async function callGroq(messages: GroqMessage[]): Promise<string> {
   let lastError = "Groq request failed.";
 
   for (const model of models) {
-    const response = await fetch(GROQ_URL, {
+    const request = async (jsonMode: boolean) => fetch(GROQ_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -43,12 +43,22 @@ export async function callGroq(messages: GroqMessage[]): Promise<string> {
         messages,
         temperature: 0.2,
         max_tokens: 1200,
-        response_format: { type: "json_object" },
+        ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
       }),
       signal: AbortSignal.timeout(25_000),
     });
 
-    const data = (await response.json().catch(() => ({}))) as GroqResponse;
+    let response = await request(true);
+    let data = (await response.json().catch(() => ({}))) as GroqResponse;
+    if (
+      !response.ok &&
+      response.status === 400 &&
+      data.error?.message?.toLowerCase().includes("failed_generation")
+    ) {
+      response = await request(false);
+      data = (await response.json().catch(() => ({}))) as GroqResponse;
+    }
+
     if (response.ok) {
       const content = data.choices?.[0]?.message?.content?.trim();
       if (!content) throw new Error("Groq returned an empty response.");

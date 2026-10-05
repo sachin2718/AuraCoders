@@ -183,6 +183,22 @@ function makeStubOutput(
   };
 }
 
+function makeFallbackSummary(segments: TranscriptSegment[]): Summary {
+  const sentences = segments
+    .map((segment) => segment.text.trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  const keyPoints = sentences.slice(0, 5);
+  return {
+    tldr: sentences.length
+      ? sentences.slice(0, 3).join(" ")
+      : "The meeting ended without any finalized transcript content.",
+    key_points: keyPoints.length ? keyPoints : ["No discussion points were captured."],
+    decisions: [],
+    open_questions: [],
+  };
+}
+
 // ─── Hierarchical chunked summarisation ──────────────────────────────────────
 
 async function summariseChunks(
@@ -261,15 +277,25 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineOutput>
 
   // ── Step 3: Parallel LLM calls ────────────────────────────────────────────
   const actionPrompt = buildActionPrompt(basePromptInput);
+  const canUseDeterministicFallback = !process.env.GEMINI_API_KEY && !process.env.LLM_API_KEY;
+
+  const withFallback = <T>(promise: Promise<T>, fallback: T): Promise<T> =>
+    promise.catch((error) => {
+      if (!canUseDeterministicFallback) throw error;
+      return fallback;
+    });
 
   const [summary, rawActionItems] = await Promise.all([
     // Summary: chunked or single
     needsChunking
-      ? summariseChunks(chunks, basePromptInput)
-      : callWithRetry<Summary>(buildSummaryPrompt(basePromptInput), SummarySchema, "summary"),
+      ? withFallback(summariseChunks(chunks, basePromptInput), makeFallbackSummary(segments))
+      : withFallback(
+          callWithRetry<Summary>(buildSummaryPrompt(basePromptInput), SummarySchema, "summary"),
+          makeFallbackSummary(segments),
+        ),
 
     // Action items always run on the full transcript (needs global context)
-    callWithRetry<ActionItems>(actionPrompt, ActionItemsSchema, "action-items"),
+    withFallback(callWithRetry<ActionItems>(actionPrompt, ActionItemsSchema, "action-items"), []),
   ]);
 
   // ── Step 4: Map owner names → user IDs ───────────────────────────────────

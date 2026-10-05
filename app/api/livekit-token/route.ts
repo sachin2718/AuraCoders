@@ -48,6 +48,19 @@ export async function POST(req: NextRequest) {
     const livekitUrl =
       process.env.LIVEKIT_URL || process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
+    // Local development can use a token generated from the same LiveKit
+    // project without exposing the server secret. Production always requires
+    // LIVEKIT_API_KEY and LIVEKIT_API_SECRET so tokens are signed server-side.
+    const developmentToken = process.env.NEXT_PUBLIC_DEV_LIVEKIT_TOKEN?.trim();
+    if (
+      process.env.NODE_ENV !== "production" &&
+      developmentToken &&
+      livekitUrl &&
+      !developmentToken.startsWith("mock-")
+    ) {
+      return NextResponse.json({ token: developmentToken, url: livekitUrl });
+    }
+
     if (!apiKey || !apiSecret || !livekitUrl) {
       if (isMockMode() || process.env.NODE_ENV !== "production") {
         return NextResponse.json({

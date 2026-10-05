@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useTransition, Suspense, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createBrowserClient, DEMO_USERS } from "@/lib/supabase";
+import { createBrowserClient, DEMO_USERS, isSupabaseConfigured } from "@/lib/supabase";
 import { Video, Loader2, Mail, Lock, Sparkles, UserCheck, Zap, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +51,31 @@ function LoginForm() {
     setMessage(null);
     startTransition(async () => {
       const user = DEMO_USERS[userKey];
-      await supabase.auth.signInWithPassword({
+      if (isSupabaseConfigured()) {
+        const provision = await fetch("/api/auth/demo", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ userKey }),
+        });
+        const provisionResult = (await provision.json().catch(() => null)) as { error?: string } | null;
+        if (!provision.ok) {
+          setMessage({
+            type: "err",
+            text: provisionResult?.error ?? "Supabase could not prepare the demo profile.",
+          });
+          return;
+        }
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: "demo-password",
       });
+      if (error) {
+        setMessage({ type: "err", text: error.message });
+        return;
+      }
+
       router.push(redirectTo);
       router.refresh();
     });
@@ -72,6 +93,11 @@ function LoginForm() {
       });
       if (error) {
         setMessage({ type: "err", text: error.message });
+      } else if (isSupabaseConfigured()) {
+        setMessage({
+          type: "ok",
+          text: "Check your inbox for the sign-in link. This page will continue after you confirm it.",
+        });
       } else {
         router.push(redirectTo);
         router.refresh();
@@ -84,9 +110,14 @@ function LoginForm() {
     setMessage(null);
     startTransition(async () => {
       if (passTab === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) {
           setMessage({ type: "err", text: error.message });
+        } else if (isSupabaseConfigured() && !data.session) {
+          setMessage({
+            type: "ok",
+            text: "Account created. Confirm the email sent by Supabase, then use Sign in.",
+          });
         } else {
           router.push(redirectTo);
           router.refresh();
@@ -288,7 +319,7 @@ function LoginForm() {
                     minLength={4}
                   />
                   <p className="text-[11px] text-[#8D766E]">
-                    💡 Any email/password will work in demo mode.
+                    💡 Use an account from this Supabase project, or create one here first.
                   </p>
                   <SubmitBtn
                     loading={isPending}
