@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { UsersRound } from "lucide-react";
 import ConsentBanner from "./ConsentBanner";
 
 type LobbyProps = {
@@ -14,6 +15,7 @@ type LobbyProps = {
   onJoin: () => void;
   onLeave: () => void;
   onStreamReady?: (stream: MediaStream) => void;
+  participantCount?: number | null;
 };
 
 export default function Lobby({
@@ -27,6 +29,7 @@ export default function Lobby({
   onJoin,
   onLeave,
   onStreamReady,
+  participantCount,
 }: LobbyProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -85,7 +88,15 @@ export default function Lobby({
         <header className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[.18em] text-indigo-300">Meeting lobby</p>
-            <h1 className="mt-1 text-2xl font-semibold">{code}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-semibold">{code}</h1>
+              {typeof participantCount === "number" && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-300">
+                  <UsersRound className="h-3.5 w-3.5" />
+                  {participantCount} {participantCount === 1 ? "participant in meeting" : "participants in meeting"}
+                </span>
+              )}
+            </div>
           </div>
           <p className="rounded-full bg-slate-800 px-3 py-2 text-sm text-slate-200">Joining as <strong>{displayName}</strong></p>
         </header>

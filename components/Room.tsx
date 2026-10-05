@@ -8,6 +8,7 @@ import {
   ParticipantTile,
   RoomAudioRenderer,
   useLocalParticipant,
+  useParticipants,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
@@ -16,6 +17,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Captions,
+  Check,
+  Copy,
+  Crown,
   LogOut,
   Mic,
   MicOff,
@@ -27,6 +31,7 @@ import {
   UsersRound,
   Video,
   VideoOff,
+  X,
 } from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
@@ -297,9 +302,115 @@ function InCall({
   const [localMicOn, setLocalMicOn] = useState(true);
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [screenShareEnabled, setScreenShareEnabled] = useState(false);
+  const [showParticipantsModal, setShowParticipantsModal] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [dbParticipants, setDbParticipants] = useState<Array<{ user_id: string; display_name: string }>>([]);
+
+  // Host verification: Only the host (meeting.host_id === current user) is considered host
+  const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
 
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
+  const liveKitParticipants = useParticipants();
+
+  useEffect(() => {
+    if (!meetingId) return;
+    let active = true;
+
+    const loadParticipants = async () => {
+      try {
+        const details = await api.getMeeting(meetingId);
+        if (active && Array.isArray(details.participants)) {
+          setDbParticipants(details.participants);
+        }
+      } catch {
+        // non-critical
+      }
+    };
+
+    void loadParticipants();
+    const interval = setInterval(loadParticipants, 6000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [meetingId]);
+
+  const displayParticipants = useMemo(() => {
+    const list: Array<{
+      id: string;
+      name: string;
+      isLocal: boolean;
+      isHost: boolean;
+      isSpeaking: boolean;
+      micEnabled: boolean;
+      cameraEnabled: boolean;
+      status: "active" | "registered";
+    }> = [];
+    const seenIds = new Set<string>();
+
+    if (liveKitParticipants.length > 0) {
+      for (const p of liveKitParticipants) {
+        seenIds.add(p.identity);
+        const isParticipantHost = Boolean(hostId && p.identity.trim() === hostId.trim());
+        list.push({
+          id: p.identity,
+          name: p.name || (p.isLocal ? displayName : `User-${p.identity.slice(0, 5)}`),
+          isLocal: p.isLocal,
+          isHost: isParticipantHost,
+          isSpeaking: p.isSpeaking,
+          micEnabled: p.isMicrophoneEnabled,
+          cameraEnabled: p.isCameraEnabled,
+          status: "active",
+        });
+      }
+    }
+
+    const hasLocal = list.some((p) => p.isLocal);
+    if (!hasLocal) {
+      const localId = userId || "local-user";
+      seenIds.add(localId);
+      list.push({
+        id: localId,
+        name: displayName || "You",
+        isLocal: true,
+        isHost: Boolean(isHost),
+        isSpeaking: false,
+        micEnabled: localMicOn,
+        cameraEnabled: localCamOn,
+        status: "active",
+      });
+    }
+
+    for (const dp of dbParticipants) {
+      if (!seenIds.has(dp.user_id) && dp.display_name !== displayName) {
+        seenIds.add(dp.user_id);
+        list.push({
+          id: dp.user_id,
+          name: dp.display_name,
+          isLocal: dp.user_id === userId,
+          isHost: Boolean(hostId && dp.user_id.trim() === hostId.trim()),
+          isSpeaking: false,
+          micEnabled: false,
+          cameraEnabled: false,
+          status: "registered",
+        });
+      }
+    }
+
+    return list;
+  }, [liveKitParticipants, hostId, displayName, userId, isHost, localMicOn, localCamOn, dbParticipants]);
+
+  const totalParticipantCount = displayParticipants.length;
+
+  const copyMeetingLink = () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    if (url) {
+      navigator.clipboard.writeText(url).catch(() => {});
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
   const tracks = useTracks([
     { source: Track.Source.Camera, withPlaceholder: false },
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -338,9 +449,6 @@ function InCall({
   const [localTranscriptLines, setLocalTranscriptLines] = useState<TranscriptLine[]>([]);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const hasEndedRef = useRef(false);
-
-  // Host verification: Only the host (meeting.host_id === current user) is considered host
-  const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
   const speechEnabled = captionsEnabled && consented && (isMockLiveKit ? localMicOn : isMicrophoneEnabled) && !ending;
 
   const toggleScreenShare = async () => {
@@ -576,16 +684,36 @@ function InCall({
             <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="h-3 w-3 text-emerald-400" /> MeetMate meeting</p>
           </div>
         </div>
-        <div className="hidden items-center gap-2 sm:flex">
-          <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
-          <button type="button" aria-label="More meeting options" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowParticipantsModal((prev) => !prev)}
+            className="flex items-center gap-2 rounded-xl border border-slate-700/80 bg-slate-800/90 px-3 py-1.5 text-xs font-medium text-slate-200 shadow-sm transition hover:border-indigo-500/50 hover:bg-slate-700"
+            title="Click to view all participants"
+          >
+            <UsersRound className="h-3.5 w-3.5 text-indigo-400" />
+            <span>{totalParticipantCount} {totalParticipantCount === 1 ? "participant" : "participants"}</span>
+          </button>
+          <span className="hidden items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200 sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
+          <button type="button" aria-label="More meeting options" className="hidden rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white sm:block"><MoreHorizontal className="h-4 w-4" /></button>
         </div>
       </div>
 
       <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-            <div className="flex items-center gap-2 text-xs text-slate-300"><UsersRound className="h-4 w-4 text-indigo-300" /> Participants <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px]">{tracks.length || 1}</span></div>
+            <button
+              type="button"
+              onClick={() => setShowParticipantsModal(true)}
+              className="flex items-center gap-2 text-xs text-slate-300 hover:text-white transition group cursor-pointer"
+              title="Click to view participant list"
+            >
+              <UsersRound className="h-4 w-4 text-indigo-300 group-hover:text-indigo-200 transition-colors" />
+              <span className="font-medium">Participants</span>
+              <span className="rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-semibold">
+                {totalParticipantCount} added
+              </span>
+            </button>
             <p className="hidden text-xs text-slate-500 md:block">Speak naturally — MeetMate is listening</p>
           </div>
           <div className="min-h-[360px] flex-1 p-3">
@@ -620,6 +748,22 @@ function InCall({
             ) : (
               <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
             )}
+            <button
+              type="button"
+              aria-label={`View participants (${totalParticipantCount})`}
+              onClick={() => setShowParticipantsModal((prev) => !prev)}
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition ${
+                showParticipantsModal
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-medium"
+                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+              }`}
+            >
+              <UsersRound className="h-4 w-4 text-indigo-300" />
+              <span className="hidden xs:inline">People</span>
+              <span className="rounded-full bg-slate-900/60 px-2 py-0.5 text-xs font-semibold text-indigo-200">
+                {totalParticipantCount}
+              </span>
+            </button>
             <button
               type="button"
               aria-pressed={captionsEnabled}
@@ -662,6 +806,99 @@ function InCall({
       </div>
       <RoomAudioRenderer />
       <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
+
+      {/* Participants Drawer / Modal */}
+      {showParticipantsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm sm:justify-end animate-in fade-in">
+          <div
+            role="dialog"
+            aria-label="Participants list"
+            className="flex h-full max-h-[640px] w-full max-w-sm flex-col rounded-2xl border border-slate-700/80 bg-[#161f33] p-5 shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-slate-700/60 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+                  <UsersRound className="h-4 w-4" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-white">Participants</h2>
+                  <p className="text-xs text-slate-400">{totalParticipantCount} {totalParticipantCount === 1 ? "person added" : "people added to meeting"}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowParticipantsModal(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="my-3 flex items-center justify-between rounded-xl bg-slate-800/80 border border-slate-700/50 p-2.5">
+              <div className="min-w-0 pr-2">
+                <p className="text-[11px] font-medium text-slate-300">Invite more participants</p>
+                <p className="truncate text-[10px] text-slate-400">Code: <span className="font-mono text-indigo-300">{code}</span></p>
+              </div>
+              <button
+                type="button"
+                onClick={copyMeetingLink}
+                className="shrink-0 flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1.5 text-xs font-medium text-white transition shadow-sm"
+              >
+                {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-300" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedLink ? "Copied" : "Copy Link"}</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {displayParticipants.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-800 bg-[#1c273e] p-3 transition hover:border-slate-700"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow">
+                      {p.name.charAt(0).toUpperCase()}
+                      {p.isSpeaking && (
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-[#161f33] animate-pulse" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="truncate text-xs font-medium text-slate-100">{p.name}</span>
+                        {p.isLocal && (
+                          <span className="rounded bg-indigo-500/20 px-1 py-0.2 text-[9px] font-medium text-indigo-300">You</span>
+                        )}
+                        {p.isHost && (
+                          <span className="flex items-center gap-0.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
+                            <Crown className="h-2.5 w-2.5" /> Host
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400">
+                        {p.status === "active" ? "In meeting" : "Invited / Registered"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 text-slate-400">
+                    {p.micEnabled ? (
+                      <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                    ) : (
+                      <MicOff className="h-3.5 w-3.5 text-red-400" />
+                    )}
+                    {p.cameraEnabled ? (
+                      <Video className="h-3.5 w-3.5 text-emerald-400" />
+                    ) : (
+                      <VideoOff className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -688,6 +925,26 @@ export default function Room({
   const [joinError, setJoinError] = useState<string | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
   const [lobbyStream, setLobbyStream] = useState<MediaStream | null>(null);
+  const [lobbyParticipantCount, setLobbyParticipantCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCount = async () => {
+      try {
+        const idToFetch = meetingId || (code ? (await api.findMeetingByCode(code))?.id : null);
+        if (idToFetch) {
+          const details = await api.getMeeting(idToFetch);
+          if (!cancelled && details.participants) {
+            setLobbyParticipantCount(details.participants.length);
+          }
+        }
+      } catch {
+        // non-critical
+      }
+    };
+    void fetchCount();
+    return () => { cancelled = true; };
+  }, [code, meetingId]);
 
   const handleNotice = useCallback((nextNotice: Notice) => {
     setNotice(nextNotice);
@@ -808,6 +1065,7 @@ export default function Room({
           onJoin={() => void joinMeeting()}
           onLeave={leaveLobby}
           onStreamReady={setLobbyStream}
+          participantCount={lobbyParticipantCount}
         />
         <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
       </>
