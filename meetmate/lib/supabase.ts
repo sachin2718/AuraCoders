@@ -1,11 +1,13 @@
 /**
  * lib/supabase.ts
- * Exports two helpers:
- *  - createBrowserClient()  → use in Client Components / browser hooks
- *  - createServerClient()   → use in Server Components, Route Handlers, middleware
+ * Supabase client configurations:
+ * - Browser client: uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * - Server client: uses SUPABASE_SERVICE_ROLE_KEY (never exposed to browser bundles)
  *
- * IMPORTANT: next/headers is imported lazily inside createServerClient so that
- * this file is safe to import from Client Components (createBrowserClient only).
+ * Exports helpers:
+ * - createBrowserClient() for Client Components
+ * - createServerClient() for Server Components / Route Handlers
+ * - getSupabaseServerClient() for service-role server operations
  */
 
 import { createBrowserClient as _browser } from "@supabase/ssr";
@@ -13,15 +15,88 @@ import {
   createServerClient as _server,
   type CookieOptions,
 } from "@supabase/ssr";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let cachedBrowserClient: SupabaseClient | null = null;
+let cachedServerClient: SupabaseClient | null = null;
 
-// ── Browser client (singleton-safe; call inside 'use client' components) ─────
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+/**
+ * Returns true if real Supabase environment variables are configured.
+ * Never logs keys or secrets.
+ */
+export function isSupabaseConfigured(): boolean {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!SUPABASE_URL || (!serviceKey && !SUPABASE_ANON)) return false;
+  if (SUPABASE_URL.includes("your-project.supabase.co")) return false;
+  if (serviceKey && serviceKey.includes("your_supabase_service_role_key")) return false;
+  if (SUPABASE_ANON && SUPABASE_ANON.includes("your_supabase_anon_key")) return false;
+
+  return true;
+}
+
+/**
+ * Browser-safe Supabase client using public anon key.
+ */
+export function getSupabaseBrowserClient(): SupabaseClient {
+  if (cachedBrowserClient) {
+    return cachedBrowserClient;
+  }
+
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    throw new Error(
+      "Supabase browser client error: NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing."
+    );
+  }
+
+  cachedBrowserClient = createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
+
+  return cachedBrowserClient;
+}
+
+/**
+ * Server-only Supabase client using SUPABASE_SERVICE_ROLE_KEY.
+ * Bypasses Row Level Security (RLS) for server-side processing & DB operations.
+ */
+export function getSupabaseServerClient(): SupabaseClient {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "Security Error: getSupabaseServerClient() cannot be called in a client/browser environment. Service role key is server-only."
+    );
+  }
+
+  if (cachedServerClient) {
+    return cachedServerClient;
+  }
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!SUPABASE_URL || !serviceRoleKey) {
+    throw new Error(
+      "Supabase server client error: SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing."
+    );
+  }
+
+  cachedServerClient = createClient(SUPABASE_URL, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return cachedServerClient;
+}
+
 export function createBrowserClient() {
   if (!SUPABASE_URL || !SUPABASE_ANON) {
-    // Return a no-op stub so the login page renders even without .env.local.
-    // Every auth call will reject with a clear console message.
     const stub = {
       auth: {
         getUser: async () => ({ data: { user: null }, error: null }),
@@ -32,18 +107,13 @@ export function createBrowserClient() {
         signOut: async () => {},
       },
     };
-    console.warn(
-      "[MeetMate] Supabase env vars not set. Copy .env.local.example → .env.local"
-    );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return stub as any;
   }
+
   return _browser(SUPABASE_URL, SUPABASE_ANON);
 }
 
-// ── Server client (call inside Server Components / Route Handlers) ────────────
-// next/headers is imported here (not at module top-level) so the client bundle
-// never tries to resolve it.
 export async function createServerClient() {
   if (!SUPABASE_URL || !SUPABASE_ANON) {
     return {
@@ -81,3 +151,15 @@ export async function createServerClient() {
     },
   });
 }
+
+export const supabaseBrowser = {
+  get client(): SupabaseClient {
+    return getSupabaseBrowserClient();
+  },
+};
+
+export const supabaseServer = {
+  get client(): SupabaseClient {
+    return getSupabaseServerClient();
+  },
+};

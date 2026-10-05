@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect, useTransition, type FormEvent } from "react";
+import { useState, useEffect, useTransition, Suspense, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase";
 import { Video, Loader2, Mail, Lock, Sparkles } from "lucide-react";
@@ -17,6 +17,14 @@ type Mode = "magic" | "password";
 type PassTab = "signin" | "signup";
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#18110E] flex items-center justify-center text-[#A89F91]">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
