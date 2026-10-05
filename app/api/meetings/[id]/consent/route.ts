@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser, isMockMode } from "@/lib/auth";
-import { getMeetingData, markConsent } from "@/lib/db";
+import { getMeetingData, markConsent, upsertParticipant } from "@/lib/db";
 import {
   meetingsStore,
   FIXTURE_PARTICIPANTS,
@@ -18,6 +18,7 @@ import {
 
 const ConsentSchema = z.object({
   userId: z.string().min(1, "userId is required").optional(),
+  displayName: z.string().min(1).optional(),
 });
 
 export async function POST(
@@ -67,7 +68,15 @@ export async function POST(
     return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
   }
 
-  // 3. Mark consent in DB
+  // 3. Register or update participant display name
+  const participantName = parsed.data?.displayName || user.email?.split("@")[0] || targetUserId;
+  await upsertParticipant({
+    meetingId: id,
+    userId: targetUserId,
+    displayName: participantName,
+  });
+
+  // 4. Mark consent in DB
   await markConsent(id, targetUserId);
 
   // Sync with legacy mock fixture if in mock mode

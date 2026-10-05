@@ -26,8 +26,11 @@ import {
   MonitorUp,
   MoreHorizontal,
   PhoneOff,
+  Plus,
   ShieldCheck,
   Sparkles,
+  Trash2,
+  UserPlus,
   UsersRound,
   Video,
   VideoOff,
@@ -208,7 +211,7 @@ function LocalCameraStage({
   );
 
   return (
-    <div className="relative flex h-full min-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
+    <div className="relative flex h-full min-h-[200px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
       {/* Video element is kept in the DOM to avoid re-initializing video decoding */}
       <video
         ref={handleVideoRef}
@@ -223,15 +226,15 @@ function LocalCameraStage({
       {/* Fallback View when camera is turned off or loading */}
       {(!cameraOn || !stream) && (
         <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-300">
-          <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-3xl font-bold text-slate-100 shadow-xl">
+          <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-2xl sm:text-3xl font-bold text-slate-100 shadow-xl">
             {displayName.slice(0, 2).toUpperCase()}
             {cameraOn && !stream && (
-              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs">
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-xs">
                 📷
               </span>
             )}
           </div>
-          <span className="text-base font-semibold">{displayName}</span>
+          <span className="text-sm font-semibold">{displayName}</span>
           <span className="text-xs text-slate-400">
             {!cameraOn
               ? "Camera is turned off"
@@ -256,7 +259,7 @@ function LocalCameraStage({
       )}
 
       {/* Participant info badge */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10">
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10 z-10">
         <span className="text-xs font-medium text-white">{displayName} (You)</span>
         {!micOn && <span className="text-xs text-red-400 font-semibold">🔇 Muted</span>}
         {cameraOn && stream && (
@@ -265,6 +268,99 @@ function LocalCameraStage({
             Live
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function getAvatarGradient(name: string): string {
+  const gradients = [
+    "from-indigo-600 via-purple-600 to-indigo-800",
+    "from-emerald-600 via-teal-600 to-emerald-800",
+    "from-amber-600 via-orange-600 to-amber-800",
+    "from-rose-600 via-pink-600 to-rose-800",
+    "from-cyan-600 via-blue-600 to-cyan-800",
+    "from-violet-600 via-fuchsia-600 to-violet-800",
+  ];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return gradients[Math.abs(hash) % gradients.length];
+}
+
+function RemoteParticipantStage({
+  participant,
+}: {
+  participant: {
+    id: string;
+    name: string;
+    isLocal: boolean;
+    isHost: boolean;
+    isSpeaking: boolean;
+    micEnabled: boolean;
+    cameraEnabled: boolean;
+    status: "active" | "registered";
+  };
+}) {
+  const initial = (participant.name.trim().charAt(0) || "U").toUpperCase();
+  const gradient = getAvatarGradient(participant.name);
+
+  return (
+    <div className="relative flex h-full min-h-[200px] w-full flex-col items-center justify-center overflow-hidden rounded-xl border border-slate-800 bg-[#0d1527] p-4 shadow-lg transition-all hover:border-slate-700/80">
+      {/* Background illumination effect */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-70" />
+
+      {/* Center Avatar with Speaking Halo */}
+      <div className="relative flex flex-col items-center justify-center z-10">
+        <div
+          className={`relative flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-gradient-to-br ${gradient} text-2xl sm:text-3xl font-bold text-white shadow-xl transition-all duration-300 ${
+            participant.isSpeaking
+              ? "ring-4 ring-emerald-400 ring-offset-2 ring-offset-[#0d1527] scale-105"
+              : "ring-2 ring-white/10"
+          }`}
+        >
+          {initial}
+          {participant.isSpeaking && (
+            <span className="absolute -bottom-1 flex items-center gap-0.5 rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black shadow-md">
+              <span className="h-1.5 w-1.5 rounded-full bg-black animate-ping" />
+              Speaking
+            </span>
+          )}
+        </div>
+        <span className="mt-3 truncate max-w-[180px] text-sm font-semibold text-slate-100">
+          {participant.name}
+        </span>
+        <span className="text-[11px] text-slate-400">
+          {participant.status === "active" ? "In meeting" : "Invited participant"}
+        </span>
+      </div>
+
+      {/* Top right status pills */}
+      <div className="absolute top-3 right-3 flex items-center gap-1.5 z-10">
+        {participant.isHost && (
+          <span className="flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 text-[10px] font-semibold text-amber-300 shadow-sm">
+            <Crown className="h-3 w-3" /> Host
+          </span>
+        )}
+        <div className="flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 backdrop-blur-md border border-white/10">
+          {participant.micEnabled ? (
+            <Mic className="h-3.5 w-3.5 text-emerald-400" />
+          ) : (
+            <MicOff className="h-3.5 w-3.5 text-red-400" />
+          )}
+          {participant.cameraEnabled ? (
+            <Video className="h-3.5 w-3.5 text-emerald-400" />
+          ) : (
+            <VideoOff className="h-3.5 w-3.5 text-slate-500" />
+          )}
+        </div>
+      </div>
+
+      {/* Bottom left name tag */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md border border-white/10 z-10">
+        <span className="truncate max-w-[130px]">{participant.name}</span>
+        {!participant.micEnabled && <span className="text-red-400 text-[10px]">🔇 Muted</span>}
       </div>
     </div>
   );
@@ -305,6 +401,29 @@ function InCall({
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [dbParticipants, setDbParticipants] = useState<Array<{ user_id: string; display_name: string }>>([]);
+  const [extraParticipants, setExtraParticipants] = useState<Array<{ id: string; name: string; isHost: boolean; micEnabled: boolean; cameraEnabled: boolean }>>([
+    { id: "demo-user-arjun", name: "Arjun Mehta", isHost: false, micEnabled: true, cameraEnabled: false },
+    { id: "demo-user-meera", name: "Meera Patel", isHost: false, micEnabled: false, cameraEnabled: false },
+  ]);
+  const [newParticipantName, setNewParticipantName] = useState("");
+
+  const addParticipant = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const newP = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: trimmed,
+      isHost: false,
+      micEnabled: true,
+      cameraEnabled: false,
+    };
+    setExtraParticipants((prev) => [...prev, newP]);
+    onNotice({ kind: "info", message: `${trimmed} added to the meeting.` });
+  };
+
+  const removeParticipant = (id: string) => {
+    setExtraParticipants((prev) => prev.filter((p) => p.id !== id));
+  };
 
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
@@ -383,7 +502,7 @@ function InCall({
     }
 
     for (const dp of dbParticipants) {
-      if (!seenIds.has(dp.user_id) && dp.display_name !== displayName) {
+      if (!seenIds.has(dp.user_id) && dp.display_name.toLowerCase() !== displayName.toLowerCase()) {
         seenIds.add(dp.user_id);
         list.push({
           id: dp.user_id,
@@ -398,8 +517,24 @@ function InCall({
       }
     }
 
+    for (const ep of extraParticipants) {
+      if (!seenIds.has(ep.id) && ep.name.toLowerCase() !== displayName.toLowerCase()) {
+        seenIds.add(ep.id);
+        list.push({
+          id: ep.id,
+          name: ep.name,
+          isLocal: false,
+          isHost: ep.isHost,
+          isSpeaking: false,
+          micEnabled: ep.micEnabled,
+          cameraEnabled: ep.cameraEnabled,
+          status: "active",
+        });
+      }
+    }
+
     return list;
-  }, [liveKitParticipants, hostId, displayName, userId, isHost, localMicOn, localCamOn, dbParticipants]);
+  }, [liveKitParticipants, hostId, displayName, userId, isHost, localMicOn, localCamOn, dbParticipants, extraParticipants]);
 
   const totalParticipantCount = displayParticipants.length;
 
@@ -702,33 +837,68 @@ function InCall({
       <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setShowParticipantsModal(true)}
-              className="flex items-center gap-2 text-xs text-slate-300 hover:text-white transition group cursor-pointer"
-              title="Click to view participant list"
-            >
-              <UsersRound className="h-4 w-4 text-indigo-300 group-hover:text-indigo-200 transition-colors" />
-              <span className="font-medium">Participants</span>
-              <span className="rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-semibold">
-                {totalParticipantCount} added
-              </span>
-            </button>
-            <p className="hidden text-xs text-slate-500 md:block">Speak naturally — MeetMate is listening</p>
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowParticipantsModal(true)}
+                className="flex items-center gap-2 text-xs text-slate-300 hover:text-white transition group cursor-pointer"
+                title="Click to view participant list"
+              >
+                <UsersRound className="h-4 w-4 text-indigo-300 group-hover:text-indigo-200 transition-colors" />
+                <span className="font-semibold text-white">Participants</span>
+                <span className="rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-bold">
+                  {totalParticipantCount} added
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowParticipantsModal(true)}
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[11px] font-medium text-slate-300 hover:border-indigo-500/50 hover:bg-slate-700 hover:text-white transition shadow-sm"
+                title="Add multiple participants"
+              >
+                <UserPlus className="h-3 w-3 text-indigo-400" />
+                <span>+ Add user</span>
+              </button>
+            </div>
+            <p className="hidden text-xs text-slate-500 md:block">Multi-user view active • Speak naturally</p>
           </div>
           <div className="min-h-[360px] flex-1 p-3">
-            {!isMockLiveKit && tracks.length > 0 ? (
+            {!isMockLiveKit && tracks.length > 1 ? (
               <GridLayout tracks={tracks} className="h-full min-h-[360px]">
                 <ParticipantTile />
               </GridLayout>
             ) : (
-              <LocalCameraStage
-                displayName={displayName}
-                cameraOn={localCamOn}
-                micOn={localMicOn}
-                streamRef={localStreamRef}
-                sharedStream={sharedStream}
-              />
+              <div
+                className={`grid gap-3 h-full min-h-[360px] w-full ${
+                  displayParticipants.length <= 1
+                    ? "grid-cols-1"
+                    : displayParticipants.length === 2
+                    ? "grid-cols-1 md:grid-cols-2"
+                    : displayParticipants.length <= 4
+                    ? "grid-cols-1 sm:grid-cols-2"
+                    : displayParticipants.length <= 6
+                    ? "grid-cols-2 lg:grid-cols-3"
+                    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                }`}
+              >
+                {displayParticipants.map((p) =>
+                  p.isLocal ? (
+                    <div key={p.id} className="relative h-full w-full min-h-[200px]">
+                      <LocalCameraStage
+                        displayName={displayName}
+                        cameraOn={localCamOn}
+                        micOn={localMicOn}
+                        streamRef={localStreamRef}
+                        sharedStream={sharedStream}
+                      />
+                    </div>
+                  ) : (
+                    <div key={p.id} className="relative h-full w-full min-h-[200px]">
+                      <RemoteParticipantStage participant={p} />
+                    </div>
+                  )
+                )}
+              </div>
             )}
           </div>
           <div aria-label="Meeting participants" className="flex items-center gap-3 border-t border-slate-800 px-4 py-3">
@@ -850,6 +1020,50 @@ function InCall({
               </button>
             </div>
 
+            {/* Quick Add Participant Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newParticipantName.trim()) {
+                  addParticipant(newParticipantName);
+                  setNewParticipantName("");
+                }
+              }}
+              className="mb-2 flex gap-1.5"
+            >
+              <input
+                type="text"
+                placeholder="Enter name to add to meeting…"
+                value={newParticipantName}
+                onChange={(e) => setNewParticipantName(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-700 bg-slate-900/90 px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!newParticipantName.trim()}
+                className="flex items-center gap-1 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-40 transition shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add</span>
+              </button>
+            </form>
+
+            {/* Quick Add Suggestions */}
+            <div className="mb-3 flex flex-wrap items-center gap-1.5">
+              <span className="text-[10px] text-slate-500">Quick add:</span>
+              {["Arjun Mehta", "Meera Patel", "Sam Wilson", "Sarah Jenkins"].map((quickName) => (
+                <button
+                  key={quickName}
+                  type="button"
+                  onClick={() => addParticipant(quickName)}
+                  disabled={displayParticipants.some((p) => p.name.toLowerCase() === quickName.toLowerCase())}
+                  className="rounded-lg border border-slate-700/60 bg-slate-800/60 px-2 py-0.5 text-[10px] text-slate-300 hover:border-indigo-500/50 hover:bg-indigo-600/20 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition"
+                >
+                  +{quickName.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {displayParticipants.map((p) => (
                 <div
@@ -891,6 +1105,16 @@ function InCall({
                       <Video className="h-3.5 w-3.5 text-emerald-400" />
                     ) : (
                       <VideoOff className="h-3.5 w-3.5 text-slate-500" />
+                    )}
+                    {extraParticipants.some((ep) => ep.id === p.id) && (
+                      <button
+                        type="button"
+                        onClick={() => removeParticipant(p.id)}
+                        className="rounded p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition"
+                        title="Remove participant"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -1020,7 +1244,7 @@ export default function Room({
       const response = await fetch(`/api/meetings/${encodeURIComponent(effectiveMeetingId)}/consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: effectiveUserId }),
+        body: JSON.stringify({ userId: effectiveUserId, displayName }),
       });
       if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
     } catch (cause) {
