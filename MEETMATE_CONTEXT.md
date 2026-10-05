@@ -65,23 +65,50 @@ Each participant's browser transcribes its own microphone and POSTs final senten
 }
 ```
 
-## Target folders
-- `app/(auth)/login`
-- `app/dashboard`
-- `app/meeting/[code]`
-- `app/summary/[id]`
-- `app/todos`
-- `app/api/*`
-- `components/`
-- `lib/ai/`
-- `lib/livekit.ts`
-- `lib/supabase.ts`
-- `lib/speech.ts`
-- `samples/`
-- `desktop/`
+## Required project workflow and folder map
+Follow this structure and priority order as the MeetMate implementation workflow. Keep each feature in its named location and do not skip ahead unless the user changes priorities.
+
+Priority labels are literal: preserve the supplied P1/P3/P4/P5 assignments, never renumber or infer a different phase, and leave P2 undefined unless the user assigns it.
+
+```text
+meetmate/
+├── app/
+│   ├── (auth)/login/                 # P1
+│   ├── dashboard/                    # P1
+│   ├── meeting/
+│   │   └── [code]/page.tsx           # P1: lobby + room page
+│   ├── summary/[id]/                 # P1
+│   ├── todos/                        # P1
+│   └── api/                          # P4: token, transcript, meetings, todos
+├── components/
+│   ├── Room.tsx                      # video room
+│   ├── Lobby.tsx                     # pre-join screen
+│   ├── ChatPanel.tsx                 # in-call chat
+│   ├── TranscriptPanel.tsx           # live transcript sidebar
+│   ├── AssistantTile.tsx             # “MeetMate is listening” tile
+│   └── ConsentBanner.tsx             # recording consent notice
+├── lib/
+│   ├── livekit.ts                    # LiveKit connection helpers
+│   ├── speech.ts                     # Web Speech API wrapper
+│   ├── speech-fallback.ts            # backup when speech fails
+│   ├── ai/                           # P3
+│   ├── supabase.ts                   # P4
+│   └── api.ts                        # P1
+├── desktop/                          # stretch: Electron Windows .exe, hour 15+
+│   ├── main.js
+│   ├── package.json
+│   └── build/icon.ico
+└── samples/                          # P5
+```
+
+The starred meeting components are core realtime deliverables. `app/meeting/[code]/page.tsx` owns the lobby-to-room flow; keep the individual lobby, room, chat, transcript, assistant, and consent UI in their corresponding components. The Electron wrapper is stretch work and comes after the core web flow.
 
 ## Coding rules and delivery
 - TypeScript; validate API inputs with zod; secrets only via environment variables; keep files small.
 - When implementing, provide complete files and list every file created or changed.
 - Include commands to run the app and instructions to test it.
 
+
+## Workflow and target repository structure
+
+Follow the user-provided repository tree and P1/P3/P4/P5 priorities recorded in `AGENTS.md`. Implement P1 pages and `lib/api.ts`, then the marked real-time meeting UI, P3 AI, P4 API/Supabase, and P5 demo samples. The Electron `desktop/` wrapper is stretch work for hour 15 or later. Do not add unrequested features or rename API/database fields. The meeting route is the lobby + room page and the real-time UI includes `Room.tsx`, `Lobby.tsx`, `ChatPanel.tsx`, `TranscriptPanel.tsx`, `AssistantTile.tsx`, and `ConsentBanner.tsx`.
