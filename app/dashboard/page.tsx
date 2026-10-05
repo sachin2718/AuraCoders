@@ -193,7 +193,7 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#2B050D]">
+          <h1 className="text-3xl font-extrabold tracking-tight text-[#800020]">
             Meeting Workspace
           </h1>
           <p className="text-sm font-medium text-[#520919]">
@@ -207,7 +207,7 @@ export default function DashboardPage() {
             onClick={handleLoadSample}
             disabled={isLoadingSample}
             variant="outline"
-            className="border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold"
+            className="border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold shadow-sm"
           >
             {isLoadingSample ? (
               <>
@@ -227,15 +227,15 @@ export default function DashboardPage() {
       {/* Action Cards Grid */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Feature 1: New Meeting Card */}
-        <Card className="border-2 border-[#F0B8C4] bg-white shadow-sm hover:border-[#800020] transition-colors">
+        <Card className="border-2 border-[#F0B8C4] bg-white shadow-[0_4px_24px_-2px_rgba(128,0,32,0.08)] hover:border-[#800020] hover:shadow-[0_8px_30px_-4px_rgba(128,0,32,0.14)] transition-all">
           <CardHeader>
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]">
                 <PlusCircle className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle className="text-[#2B050D]">New Meeting</CardTitle>
-                <CardDescription className="text-[#800020]/70">
+                <CardTitle className="text-lg font-bold text-[#800020]">New Meeting</CardTitle>
+                <CardDescription className="text-xs font-medium text-[#520919]">
                   Create an instant AI-transcribed video room
                 </CardDescription>
               </div>
@@ -268,15 +268,15 @@ export default function DashboardPage() {
         </Card>
 
         {/* Feature 2: Join with Code Card */}
-        <Card className="border-2 border-[#F0B8C4] bg-white shadow-sm hover:border-[#800020] transition-colors">
+        <Card className="border-2 border-[#F0B8C4] bg-white shadow-[0_4px_24px_-2px_rgba(128,0,32,0.08)] hover:border-[#800020] hover:shadow-[0_8px_30px_-4px_rgba(128,0,32,0.14)] transition-all">
           <CardHeader>
             <div className="flex items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF0F3] text-[#800020] border border-[#F0B8C4]">
                 <LogIn className="h-5 w-5" />
               </span>
               <div>
-                <CardTitle className="text-[#2B050D]">Join with Code</CardTitle>
-                <CardDescription className="text-[#800020]/70">
+                <CardTitle className="text-lg font-bold text-[#800020]">Join with Code</CardTitle>
+                <CardDescription className="text-xs font-medium text-[#520919]">
                   Enter an existing meeting code or invite link
                 </CardDescription>
               </div>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
                 type="submit"
                 variant="secondary"
                 disabled={isJoining || !joinCode.trim()}
-                className="shrink-0 border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold"
+                className="shrink-0 border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3] font-bold shadow-sm"
               >
                 {isJoining ? (
                   <>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-[#800020]" />
-              <h2 className="text-xl font-bold text-[#2B050D]">
+              <h2 className="text-xl font-extrabold text-[#800020]">
                 Past Meetings
               </h2>
               {!isLoadingMeetings && meetings.length > 0 && (

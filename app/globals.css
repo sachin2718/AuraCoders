@@ -31,14 +31,6 @@
   --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1A0307;  /* Deep burgundy-black */
-    --foreground: #FFFFFF;  /* Crisp white text */
-    --burgundy-border: #520919;
-  }
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
