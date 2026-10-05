@@ -3,6 +3,7 @@
 import {
   ControlBar,
   GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -13,7 +14,20 @@ import {
 import { MediaDeviceFailure, RoomEvent, Track } from "livekit-client";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PhoneOff, LogOut } from "lucide-react";
+import {
+  Captions,
+  LogOut,
+  Mic,
+  MicOff,
+  MonitorUp,
+  MoreHorizontal,
+  PhoneOff,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+  Video,
+  VideoOff,
+} from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
@@ -62,6 +76,195 @@ function ConnectionNotices({ onNotice }: { onNotice: (notice: Notice) => void })
   return null;
 }
 
+function LocalCameraStage({
+  displayName,
+  cameraOn,
+  micOn,
+  streamRef,
+  sharedStream,
+}: {
+  displayName: string;
+  cameraOn: boolean;
+  micOn: boolean;
+  streamRef: React.MutableRefObject<MediaStream | null>;
+  sharedStream?: MediaStream | null;
+}) {
+  const [stream, setStream] = useState<MediaStream | null>(sharedStream || streamRef.current);
+  const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Directly attach stream and play
+  const bindStream = useCallback((video: HTMLVideoElement | null, mediaStream: MediaStream | null) => {
+    if (!video || !mediaStream) return;
+    if (video.srcObject !== mediaStream) {
+      video.srcObject = mediaStream;
+    }
+    video.play().catch(() => {});
+  }, []);
+
+  const initCamera = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Webcam not supported in this browser.");
+      return;
+    }
+
+    setRetrying(true);
+    setError(null);
+
+    // Try up to 3 times to allow Windows camera sensor to release from previous preview
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        let mediaStream: MediaStream;
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: true,
+          });
+        } catch {
+          // Fallback to video-only if audio exclusivity mode blocks it
+          mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        }
+
+        streamRef.current = mediaStream;
+        setStream(mediaStream);
+        setError(null);
+        setRetrying(false);
+
+        if (videoRef.current) {
+          bindStream(videoRef.current, mediaStream);
+        }
+        return;
+      } catch (err) {
+        if (attempt < 2) {
+          await new Promise((r) => setTimeout(r, 400));
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(
+            msg.includes("Permission") || msg.includes("NotAllowed")
+              ? "Camera permission denied. Allow camera access in your browser."
+              : `Camera unavailable (${msg}). Click retry below.`
+          );
+        }
+      }
+    }
+    setRetrying(false);
+  }, [bindStream, streamRef]);
+
+  useEffect(() => {
+    // If sharedStream is available from Lobby, adopt it immediately
+    if (sharedStream && sharedStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      streamRef.current = sharedStream;
+      setStream(sharedStream);
+      if (videoRef.current) {
+        bindStream(videoRef.current, sharedStream);
+      }
+      return;
+    }
+
+    // If streamRef already has an active stream
+    if (streamRef.current && streamRef.current.getVideoTracks().some((t) => t.readyState === "live")) {
+      setStream(streamRef.current);
+      if (videoRef.current) {
+        bindStream(videoRef.current, streamRef.current);
+      }
+      return;
+    }
+
+    void initCamera();
+  }, [bindStream, initCamera, sharedStream, streamRef]);
+
+  // Sync camera track enabled state
+  useEffect(() => {
+    const s = stream || streamRef.current;
+    s?.getVideoTracks().forEach((track) => {
+      track.enabled = cameraOn;
+    });
+  }, [cameraOn, stream, streamRef]);
+
+  // Sync audio track enabled state
+  useEffect(() => {
+    const s = stream || streamRef.current;
+    s?.getAudioTracks().forEach((track) => {
+      track.enabled = micOn;
+    });
+  }, [micOn, stream, streamRef]);
+
+  // Callback ref for <video> ensures srcObject is bound immediately on mount/remount
+  const handleVideoRef = useCallback(
+    (node: HTMLVideoElement | null) => {
+      videoRef.current = node;
+      const s = stream || streamRef.current;
+      if (node && s) {
+        bindStream(node, s);
+      }
+    },
+    [bindStream, stream, streamRef]
+  );
+
+  return (
+    <div className="relative flex h-full min-h-[380px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
+      {/* Video element is kept in the DOM to avoid re-initializing video decoding */}
+      <video
+        ref={handleVideoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`h-full w-full object-cover -scale-x-100 transition-opacity duration-300 ${
+          cameraOn && stream ? "opacity-100" : "opacity-0 absolute pointer-events-none"
+        }`}
+      />
+
+      {/* Fallback View when camera is turned off or loading */}
+      {(!cameraOn || !stream) && (
+        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-300">
+          <div className="relative flex h-28 w-28 items-center justify-center rounded-full border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-3xl font-bold text-slate-100 shadow-xl">
+            {displayName.slice(0, 2).toUpperCase()}
+            {cameraOn && !stream && (
+              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs">
+                📷
+              </span>
+            )}
+          </div>
+          <span className="text-base font-semibold">{displayName}</span>
+          <span className="text-xs text-slate-400">
+            {!cameraOn
+              ? "Camera is turned off"
+              : error
+              ? error
+              : retrying
+              ? "Connecting camera…"
+              : "Camera initializing…"}
+          </span>
+
+          {error && (
+            <button
+              type="button"
+              onClick={() => void initCamera()}
+              disabled={retrying}
+              className="mt-2 rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {retrying ? "Retrying…" : "Retry Camera"}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Participant info badge */}
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-black/70 px-3 py-1.5 backdrop-blur-md border border-white/10">
+        <span className="text-xs font-medium text-white">{displayName} (You)</span>
+        {!micOn && <span className="text-xs text-red-400 font-semibold">🔇 Muted</span>}
+        {cameraOn && stream && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InCall({
   code,
   displayName,
@@ -70,6 +273,8 @@ function InCall({
   hostId,
   userId,
   startedAt,
+  isMockLiveKit,
+  sharedStream,
   onNotice,
   onMeetingEnded,
   onLeave,
@@ -81,15 +286,23 @@ function InCall({
   hostId?: string;
   userId: string | null;
   startedAt: number;
+  isMockLiveKit: boolean;
+  sharedStream?: MediaStream | null;
   onNotice: (notice: Notice) => void;
   onMeetingEnded: () => void;
   onLeave: () => void;
 }) {
+  const localStreamRef = useRef<MediaStream | null>(sharedStream || null);
+  const [localCamOn, setLocalCamOn] = useState(true);
+  const [localMicOn, setLocalMicOn] = useState(true);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [screenShareEnabled, setScreenShareEnabled] = useState(false);
+
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
   const tracks = useTracks([
-    { source: Track.Source.Camera, withPlaceholder: true },
-    { source: Track.Source.ScreenShare, withPlaceholder: true },
+    { source: Track.Source.Camera, withPlaceholder: false },
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
   const screenShareTracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
@@ -128,7 +341,47 @@ function InCall({
 
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
-  const speechEnabled = consented && isMicrophoneEnabled && !ending;
+  const speechEnabled = captionsEnabled && consented && (isMockLiveKit ? localMicOn : isMicrophoneEnabled) && !ending;
+
+  const toggleScreenShare = async () => {
+    if (isMockLiveKit) {
+      onNotice({ kind: "info", message: "Screen sharing becomes available after connecting to a LiveKit room." });
+      return;
+    }
+
+    const nextValue = !screenShareEnabled;
+    try {
+      await localParticipant.setScreenShareEnabled(nextValue);
+      setScreenShareEnabled(nextValue);
+    } catch (error) {
+      onNotice({
+        kind: "error",
+        message: permissionMessage(error) ?? "Could not change screen sharing. Check browser permissions and try again.",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isMockLiveKit) return;
+
+    const syncScreenShareState = () => {
+      const publication = localParticipant.getTrackPublication(Track.Source.ScreenShare);
+      setScreenShareEnabled(Boolean(publication?.track && !publication.isMuted));
+    };
+
+    room.on(RoomEvent.LocalTrackPublished, syncScreenShareState);
+    room.on(RoomEvent.LocalTrackUnpublished, syncScreenShareState);
+    room.on(RoomEvent.TrackMuted, syncScreenShareState);
+    room.on(RoomEvent.TrackUnmuted, syncScreenShareState);
+    syncScreenShareState();
+
+    return () => {
+      room.off(RoomEvent.LocalTrackPublished, syncScreenShareState);
+      room.off(RoomEvent.LocalTrackUnpublished, syncScreenShareState);
+      room.off(RoomEvent.TrackMuted, syncScreenShareState);
+      room.off(RoomEvent.TrackUnmuted, syncScreenShareState);
+    };
+  }, [isMockLiveKit, localParticipant, room]);
 
   /**
    * Explicitly releases camera, microphone, screen share, and LiveKit tracks
@@ -136,12 +389,11 @@ function InCall({
    */
   const releaseMedia = useCallback(async () => {
     try {
-      // 1. Mute and disable devices on local participant
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
       await localParticipant.setMicrophoneEnabled(false).catch(() => undefined);
       await localParticipant.setCameraEnabled(false).catch(() => undefined);
       await localParticipant.setScreenShareEnabled(false).catch(() => undefined);
-
-      // 2. Explicitly stop every publication track and underlying mediaStreamTrack
       localParticipant.trackPublications.forEach((publication) => {
         try {
           if (publication.track) {
@@ -150,17 +402,13 @@ function InCall({
               publication.track.mediaStreamTrack.stop();
             }
           }
-        } catch {
-          // ignore individual cleanup error
-        }
+        } catch {}
       });
-
-      // 3. Disconnect room and tell LiveKit to stop all remaining tracks
-      await room.disconnect(true).catch(() => undefined);
-    } catch {
-      // ignore
-    }
-  }, [localParticipant, room]);
+      if (!isMockLiveKit) {
+        await room.disconnect(true).catch(() => undefined);
+      }
+    } catch {}
+  }, [isMockLiveKit, localParticipant, room]);
 
   // Handle meeting ended event for participants and redirect to summary
   const handleEndMeetingForClient = useCallback(async () => {
@@ -286,6 +534,8 @@ function InCall({
 
   // Participant listener: Redirect when room disconnects with meeting status != live
   useEffect(() => {
+    if (isMockLiveKit) return; // Never show disconnect banner in mock/demo mode!
+
     const disconnected = () => {
       if (hasEndedRef.current || ending) return;
 
@@ -299,11 +549,7 @@ function InCall({
               onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
             }
           })
-          .catch(() => {
-            onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
-          });
-      } else {
-        onNotice({ kind: "error", message: "You left the meeting or were disconnected." });
+          .catch(() => {});
       }
     };
 
@@ -311,7 +557,7 @@ function InCall({
     return () => {
       room.off(RoomEvent.Disconnected, disconnected);
     };
-  }, [ending, handleEndMeetingForClient, meetingId, onNotice, room]);
+  }, [ending, handleEndMeetingForClient, isMockLiveKit, meetingId, onNotice, room]);
 
   const handleLeave = async () => {
     await releaseMedia();
@@ -319,84 +565,157 @@ function InCall({
   };
 
   return (
-    <div className="grid min-h-[calc(100vh-73px)] grid-rows-[auto_1fr_auto] gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_1fr_auto]">
-      <div className="flex flex-wrap items-center justify-between gap-3 lg:col-span-2">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-xs text-emerald-100 flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            Assistant is active — AI-generated notes
-          </p>
-          <span className="text-xs text-slate-400">Room {code}</span>
+    <div className="flex min-h-[calc(100dvh-73px)] flex-col bg-[#111827] text-slate-100">
+      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-slate-700/80 bg-[#1f2937] px-4 py-2.5 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#6264a7] text-white shadow-lg shadow-indigo-950/30">
+            <Video className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-white">{code}</p>
+            <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="h-3 w-3 text-emerald-400" /> MeetMate meeting</p>
+          </div>
         </div>
-
-        {/* Host-only "End meeting" button in top toolbar */}
-        {isHost && (
-          <button
-            type="button"
-            disabled={ending}
-            onClick={() => void endMeeting()}
-            className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/25 hover:border-red-500/60 disabled:opacity-50"
-          >
-            <PhoneOff className="h-4 w-4 text-red-400" />
-            <span>{ending ? "Ending meeting…" : "End meeting"}</span>
-          </button>
-        )}
+        <div className="hidden items-center gap-2 sm:flex">
+          <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
+          <button type="button" aria-label="More meeting options" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+        </div>
       </div>
 
+<<<<<<< HEAD
       <section className="flex min-h-[360px] flex-col overflow-hidden rounded-xl border border-slate-700 bg-[#080d18]">
         <div className="flex-1 p-2">
-          <GridLayout tracks={tracks} className="h-full">
-            <ParticipantTile />
-          </GridLayout>
+          {!isMockLiveKit && tracks.length > 0 ? (
+            <GridLayout tracks={tracks} className="h-full">
+              <ParticipantTile />
+            </GridLayout>
+          ) : (
+            <LocalCameraStage
+              displayName={displayName}
+              cameraOn={localCamOn}
+              micOn={localMicOn}
+              streamRef={localStreamRef}
+              sharedStream={sharedStream}
+            />
+          )}
         </div>
         <div aria-label="Meeting participants" className="flex flex-wrap items-center gap-3 border-t border-slate-700 px-3 py-2">
           <AssistantTile />
         </div>
         <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
-          <ControlBar
-            variation="verbose"
-            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
-            onDeviceError={({ source, error }) => onNotice({
-              kind: "error",
-              message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
-            })}
-          />
+          {isMockLiveKit ? (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setLocalMicOn((m) => !m)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
+                }`}
+              >
+                {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}
+                <span>{localMicOn ? "Mute Mic" : "Unmute Mic"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLocalCamOn((c) => !c)}
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                  localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"
+                }`}
+              >
+                {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}
+                <span>{localCamOn ? "Stop Video" : "Start Video"}</span>
+              </button>
+            </div>
+          ) : (
+            <ControlBar
+              variation="verbose"
+              controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
+              onDeviceError={({ source, error }) => onNotice({
+                kind: "error",
+                message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
+              })}
+            />
+          )}
           {/* Host has End meeting in control bar; non-host has Leave */}
           {isHost ? (
+=======
+      <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
+            <div className="flex items-center gap-2 text-xs text-slate-300"><UsersRound className="h-4 w-4 text-indigo-300" /> Participants <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px]">{tracks.length || 1}</span></div>
+            <p className="hidden text-xs text-slate-500 md:block">Speak naturally — MeetMate is listening</p>
+          </div>
+          <div className="min-h-[360px] flex-1 p-3">
+            {!isMockLiveKit && tracks.length > 0 ? (
+              <GridLayout tracks={tracks} className="h-full min-h-[360px]">
+                <ParticipantTile />
+              </GridLayout>
+            ) : (
+              <LocalCameraStage
+                displayName={displayName}
+                cameraOn={localCamOn}
+                micOn={localMicOn}
+                streamRef={localStreamRef}
+              />
+            )}
+          </div>
+          <div aria-label="Meeting participants" className="flex items-center gap-3 border-t border-slate-800 px-4 py-3">
+            <AssistantTile />
+            <div className="hidden text-xs text-slate-500 sm:block"><p className="text-slate-300">MeetMate Assistant</p><p>AI notes are being prepared in real time</p></div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 border-t border-slate-800 bg-[#111827] px-3 py-3">
+            {isMockLiveKit ? (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button type="button" onClick={() => setLocalMicOn((m) => !m)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${localMicOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"}`}>
+                  {localMicOn ? <Mic className="h-4 w-4 text-emerald-400" /> : <MicOff className="h-4 w-4" />}<span className="hidden xs:inline">{localMicOn ? "Mute" : "Unmute"}</span>
+                </button>
+                <button type="button" onClick={() => setLocalCamOn((c) => !c)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${localCamOn ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-red-600/90 text-white hover:bg-red-700"}`}>
+                  {localCamOn ? <Video className="h-4 w-4 text-emerald-400" /> : <VideoOff className="h-4 w-4" />}<span className="hidden xs:inline">{localCamOn ? "Camera" : "Start video"}</span>
+                </button>
+              </div>
+            ) : (
+              <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
+            )}
+>>>>>>> 2e20f8daed6c1cc0ecdb5ce390921a46bbe818e5
             <button
               type="button"
-              disabled={ending}
-              onClick={() => void endMeeting()}
-              className="ml-2 flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+              aria-pressed={captionsEnabled}
+              onClick={() => setCaptionsEnabled((enabled) => !enabled)}
+              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition md:flex ${captionsEnabled ? "bg-indigo-500/20 text-indigo-100" : "bg-slate-800 text-slate-400"}`}
             >
-              <PhoneOff className="h-4 w-4" />
-              <span>{ending ? "Ending…" : "End meeting"}</span>
+              <Captions className="h-4 w-4 text-indigo-300" />
+              {captionsEnabled ? "Captions on" : "Captions off"}
             </button>
-          ) : (
             <button
               type="button"
-              onClick={() => void handleLeave()}
-              className="ml-2 flex items-center gap-1.5 rounded-lg border border-slate-600 px-3.5 py-2 text-sm text-slate-200 transition hover:bg-slate-800"
+              aria-pressed={screenShareEnabled}
+              onClick={() => void toggleScreenShare()}
+              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm transition md:flex ${screenShareEnabled ? "bg-indigo-500/20 text-indigo-100" : "bg-slate-800 text-slate-300 hover:bg-slate-700"}`}
             >
-              <LogOut className="h-4 w-4" />
-              <span>Leave</span>
+              <MonitorUp className="h-4 w-4 text-indigo-300" />
+              {screenShareEnabled ? "Stop sharing" : "Share screen"}
             </button>
-          )}
-        </div>
-      </section>
+            {isHost ? (
+              <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#c4314b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e0445e] disabled:opacity-50"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End"}</span></button>
+            ) : (
+              <button type="button" onClick={() => void handleLeave()} className="flex items-center gap-2 rounded-xl bg-[#c4314b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e0445e]"><LogOut className="h-4 w-4" /><span>Leave</span></button>
+            )}
+          </div>
+        </section>
 
-      <aside className="grid min-h-0 gap-4 lg:grid-rows-2">
-        <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
-        <ChatPanel />
-      </aside>
+        <aside className="grid min-h-[520px] min-w-0 gap-3 lg:min-h-0 lg:grid-rows-2">
+          <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#172033]">
+            <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
+          </div>
+          <div className="min-h-0 overflow-hidden rounded-2xl border border-slate-700/80 bg-[#172033]">
+            <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
+          </div>
+        </aside>
+      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 lg:col-span-2">
-        <span>{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone while it is on." : "Turn on your microphone to transcribe your speech.")}</span>
-        {savingTranscript && <span role="status">Saving transcript…</span>}
-        {endError && <span role="alert" className="text-red-300">{endError}</span>}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-800 bg-[#0b1220] px-4 py-2 text-[11px] text-slate-400 sm:px-6">
+        <span className="flex items-center gap-1.5">{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone while it is on." : "Turn on your microphone to transcribe your speech.")}</span>
+        <span className="flex items-center gap-3">{savingTranscript && <span role="status">Saving transcript…</span>}{endError && <span role="alert" className="text-red-300">{endError}</span>}<span className="hidden items-center gap-1 sm:flex"><Sparkles className="h-3 w-3 text-indigo-300" /> AI-generated notes</span></span>
       </div>
       <RoomAudioRenderer />
       <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
@@ -425,6 +744,7 @@ export default function Room({
   const [joined, setJoined] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
+  const [lobbyStream, setLobbyStream] = useState<MediaStream | null>(null);
 
   const handleNotice = useCallback((nextNotice: Notice) => {
     setNotice(nextNotice);
@@ -474,10 +794,7 @@ export default function Room({
         if (!cancelled) setCredentials(result);
       } catch (cause) {
         if (!cancelled) {
-          setCredentials({
-            token: "mock-jwt-token-livekit-meetmate-dev",
-            url: "wss://meetmate-demo.livekit.cloud",
-          });
+          setError(cause instanceof Error ? cause.message : "Could not prepare the meeting.");
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -536,19 +853,31 @@ export default function Room({
 
   if (!joined) {
     return (
-      <Lobby
-        code={code}
-        displayName={displayName}
-        consented={consented}
-        serverConsentAvailable={Boolean(meetingId && userId)}
-        joining={joining}
-        joinError={joinError}
-        onConsentChange={setConsented}
-        onJoin={() => void joinMeeting()}
-        onLeave={leaveLobby}
-      />
+      <>
+        <Lobby
+          code={code}
+          displayName={displayName}
+          consented={consented}
+          serverConsentAvailable={Boolean(meetingId && userId)}
+          joining={joining}
+          joinError={joinError}
+          onConsentChange={setConsented}
+          onJoin={() => void joinMeeting()}
+          onLeave={leaveLobby}
+          onStreamReady={setLobbyStream}
+        />
+        <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
+      </>
     );
   }
+
+  const isMockLiveKit = Boolean(
+    !credentials?.url ||
+    !credentials?.token ||
+    credentials.token.startsWith("mock-") ||
+    credentials.url.includes("meetmate-demo") ||
+    credentials.url.includes("your-project")
+  );
 
   return (
     <main className="min-h-screen bg-[#0b1020] text-white">
@@ -561,32 +890,44 @@ export default function Room({
       </header>
       {notice && <div className={`fixed left-1/2 top-20 z-[100] max-w-[90vw] -translate-x-1/2 rounded-lg px-4 py-3 text-sm shadow-xl ${notice.kind === "error" ? "bg-red-800" : "bg-sky-800"}`} role="status" aria-live="polite">{notice.message}</div>}
       <LiveKitRoom
-        serverUrl={credentials.url}
-        token={credentials.token}
-        connect
-        audio
-        video
-        onError={(cause) => handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") })}
+        serverUrl={isMockLiveKit ? undefined : credentials.url}
+        token={isMockLiveKit ? undefined : credentials.token}
+        connect={!isMockLiveKit}
+        audio={!isMockLiveKit}
+        video={!isMockLiveKit}
+        options={{ adaptiveStream: true, dynacast: true }}
+        onConnected={() => {
+          if (!isMockLiveKit) handleNotice({ kind: "info", message: "Connected to LiveKit." });
+        }}
+        onError={(cause) => {
+          if (isMockLiveKit) return;
+          handleNotice({ kind: "error", message: permissionMessage(cause) ?? (cause instanceof Error ? cause.message : "Meeting connection failed.") });
+        }}
         onMediaDeviceFailure={(failure, kind) => {
+          if (isMockLiveKit) return;
           const device = kind === "audioinput" ? "microphone" : "camera";
           handleNotice({ kind: "error", message: failure === MediaDeviceFailure.PermissionDenied
             ? `Allow ${device} access in your browser settings, then rejoin.`
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} />
-        <InCall
-          code={code}
-          displayName={displayName}
-          consented={consented}
-          meetingId={meetingId}
-          hostId={hostId}
-          userId={userId}
-          startedAt={sessionStartedAt}
-          onNotice={handleNotice}
-          onMeetingEnded={navigateToSummary}
-          onLeave={() => router.push("/dashboard")}
-        />
+        <LayoutContextProvider>
+          <ConnectionNotices onNotice={handleNotice} />
+          <InCall
+            code={code}
+            displayName={displayName}
+            consented={consented}
+            meetingId={meetingId}
+            hostId={hostId}
+            userId={userId}
+            startedAt={sessionStartedAt}
+            isMockLiveKit={isMockLiveKit}
+            sharedStream={lobbyStream}
+            onNotice={handleNotice}
+            onMeetingEnded={navigateToSummary}
+            onLeave={() => router.push("/dashboard")}
+          />
+        </LayoutContextProvider>
       </LiveKitRoom>
     </main>
   );

@@ -4,6 +4,7 @@
  */
 
 import Navbar from "@/components/Navbar";
+import MeetMateAssistant from "@/components/MeetMateAssistant";
 
 export default function SummaryLayout({
   children,
@@ -16,6 +17,7 @@ export default function SummaryLayout({
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
         {children}
       </main>
+      <MeetMateAssistant />
     </div>
   );
 }

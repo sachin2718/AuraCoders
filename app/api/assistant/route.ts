@@ -58,6 +58,19 @@ async function buildContext(meetingId: string | undefined, userId: string | null
     getMeetingData(meetingId),
     getMeetingDetails(meetingId),
   ]);
+  // A local/demo meeting can exist only in the browser's meeting flow while
+  // the database is not configured yet. Keep the assistant useful in that
+  // mode instead of failing every question with "Meeting not found".
+  if (!meetingData.meeting && isMockMode()) {
+    const todos = userId ? await getTodosForUser(userId) : [];
+    return [
+      `Demo meeting: ${meetingId}`,
+      "The meeting record and transcript are not available yet.",
+      todos.length
+        ? `This member's saved to-dos:\n- ${todos.map((item) => `${item.title} [${item.status}; due ${item.due_date || "no date"}] — quote: ${item.source_quote}`).join("\n- ")}`
+        : "This member has no saved to-dos.",
+    ].join("\n\n");
+  }
   if (!meetingData.meeting) throw new Error("Meeting not found.");
   const isMember = Boolean(
     userId && (

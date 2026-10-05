@@ -131,6 +131,33 @@ const mockStore: MockStore = {
   actionItems: new Map(),
 };
 
+// A project can have valid Supabase Auth credentials before the SQL schema has
+// been applied. Keep the demo usable in that state instead of turning every
+// meeting and assistant request into a 500 response. The flag is process-local
+// and automatically disappears once the dev server is restarted after the
+// schema is installed.
+let schemaUnavailable = false;
+
+function shouldUseSupabase(): boolean {
+  return isSupabaseConfigured() && !schemaUnavailable;
+}
+
+function isMissingSchemaError(error: unknown): boolean {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error !== null && "message" in error
+        ? String((error as { message?: unknown }).message ?? "")
+        : String(error ?? "");
+  return /schema cache|relation .* does not exist|could not find the table|42P01/i.test(message);
+}
+
+function useMockAfterSchemaError(error: unknown): boolean {
+  if (!isMissingSchemaError(error)) return false;
+  schemaUnavailable = true;
+  return true;
+}
+
 export function getMockStore(): MockStore {
   return mockStore;
 }
@@ -172,7 +199,7 @@ export async function createMeeting({
     ended_at: null,
   };
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("meetings")
@@ -180,10 +207,10 @@ export async function createMeeting({
       .select()
       .single();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to create meeting in Supabase: ${error.message}`);
     }
-    return data as Meeting;
+    if (!error) return data as Meeting;
   }
 
   // Fallback
@@ -198,7 +225,7 @@ export async function createMeeting({
 export async function getMeetingByCode(code: string): Promise<Meeting | null> {
   const normalizedCode = code.trim().toUpperCase();
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("meetings")
@@ -206,10 +233,10 @@ export async function getMeetingByCode(code: string): Promise<Meeting | null> {
       .ilike("code", normalizedCode)
       .maybeSingle();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to get meeting by code: ${error.message}`);
     }
-    return (data as Meeting) || null;
+    if (!error) return (data as Meeting) || null;
   }
 
   // Fallback
@@ -226,7 +253,7 @@ export async function getMeetingByCode(code: string): Promise<Meeting | null> {
  * Returns { meeting, participants, segments, visualNotes }
  */
 export async function getMeetingData(meetingId: string): Promise<MeetingData> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const [mRes, pRes, sRes, vRes] = await Promise.all([
       supabase.from("meetings").select("*").eq("id", meetingId).maybeSingle(),
@@ -247,12 +274,12 @@ export async function getMeetingData(meetingId: string): Promise<MeetingData> {
         .order("t_ms", { ascending: true }),
     ]);
 
-    if (mRes.error) throw new Error(mRes.error.message);
-    if (pRes.error) throw new Error(pRes.error.message);
-    if (sRes.error) throw new Error(sRes.error.message);
-    if (vRes.error) throw new Error(vRes.error.message);
+    const schemaError = [mRes.error, pRes.error, sRes.error, vRes.error].find(Boolean);
+    if (schemaError && !useMockAfterSchemaError(schemaError)) {
+      throw new Error(schemaError.message);
+    }
 
-    return {
+    if (!schemaError) return {
       meeting: (mRes.data as Meeting) || null,
       participants: (pRes.data as Participant[]) || [],
       segments: (sRes.data as TranscriptSegment[]) || [],
@@ -293,7 +320,7 @@ export interface MeetingDetails {
 export async function getMeetingDetails(
   meetingId: string
 ): Promise<MeetingDetails> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const [mRes, pRes, sRes, aRes] = await Promise.all([
       supabase.from("meetings").select("*").eq("id", meetingId).maybeSingle(),
@@ -314,9 +341,12 @@ export async function getMeetingDetails(
         .order("created_at", { ascending: true }),
     ]);
 
-    if (mRes.error) throw new Error(mRes.error.message);
+    const schemaError = [mRes.error, pRes.error, sRes.error, aRes.error].find(Boolean);
+    if (schemaError && !useMockAfterSchemaError(schemaError)) {
+      throw new Error(schemaError.message);
+    }
 
-    return {
+    if (!schemaError) return {
       meeting: (mRes.data as Meeting) || null,
       participants: (pRes.data as Participant[]) || [],
       summary: (sRes.data as Summary) || undefined,
@@ -356,7 +386,7 @@ export async function upsertParticipant({
   userId: string;
   displayName: string;
 }): Promise<Participant> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("participants")
@@ -371,10 +401,10 @@ export async function upsertParticipant({
       .select()
       .single();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to upsert participant: ${error.message}`);
     }
-    return data as Participant;
+    if (!error) return data as Participant;
   }
 
   // Fallback
@@ -401,7 +431,7 @@ export async function markConsent(
 ): Promise<Participant> {
   const consentedAt = new Date().toISOString();
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("participants")
@@ -411,10 +441,10 @@ export async function markConsent(
       .select()
       .single();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to mark consent: ${error.message}`);
     }
-    return data as Participant;
+    if (!error) return data as Participant;
   }
 
   // Fallback
@@ -462,7 +492,7 @@ export async function insertSegment({
     created_at: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("transcript_segments")
@@ -470,10 +500,10 @@ export async function insertSegment({
       .select()
       .single();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to insert transcript segment: ${error.message}`);
     }
-    return data as TranscriptSegment;
+    if (!error) return data as TranscriptSegment;
   }
 
   // Fallback
@@ -506,17 +536,17 @@ export async function insertSegments(
 
   if (segments.length === 0) return [];
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("transcript_segments")
       .insert(segments)
       .select();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to batch insert segments: ${error.message}`);
     }
-    return (data as TranscriptSegment[]) || [];
+    if (!error) return (data as TranscriptSegment[]) || [];
   }
 
   // Fallback
@@ -539,7 +569,7 @@ export async function setStatus(
     updates.ended_at = new Date().toISOString();
   }
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("meetings")
@@ -548,10 +578,10 @@ export async function setStatus(
       .select()
       .single();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to update meeting status: ${error.message}`);
     }
-    return data as Meeting;
+    if (!error) return data as Meeting;
   }
 
   // Fallback
@@ -603,7 +633,7 @@ export async function saveResults(
     created_at: new Date().toISOString(),
   }));
 
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
 
     // 1. Upsert summary
@@ -612,30 +642,43 @@ export async function saveResults(
       .upsert(summaryRow, { onConflict: "meeting_id" })
       .select()
       .single();
-    if (sRes.error) throw new Error(`Failed to save summary: ${sRes.error.message}`);
+    if (sRes.error && !useMockAfterSchemaError(sRes.error)) {
+      throw new Error(`Failed to save summary: ${sRes.error.message}`);
+    }
+    if (sRes.error) {
+      // Continue with the in-memory result below when the SQL schema is absent.
+    } else {
 
     // 2. Clear old action items if retrying, then insert new items
-    await supabase.from("action_items").delete().eq("meeting_id", meetingId);
-    let savedItems: ActionItem[] = [];
-    if (actionItemRows.length > 0) {
-      const aRes = await supabase
-        .from("action_items")
-        .insert(actionItemRows)
-        .select();
-      if (aRes.error) throw new Error(`Failed to save action items: ${aRes.error.message}`);
-      savedItems = aRes.data as ActionItem[];
+      await supabase.from("action_items").delete().eq("meeting_id", meetingId);
+      let savedItems: ActionItem[] = [];
+      if (actionItemRows.length > 0) {
+        const aRes = await supabase
+          .from("action_items")
+          .insert(actionItemRows)
+          .select();
+        if (aRes.error) {
+          if (!useMockAfterSchemaError(aRes.error)) {
+            throw new Error(`Failed to save action items: ${aRes.error.message}`);
+          }
+        } else {
+          savedItems = aRes.data as ActionItem[];
+        }
+      }
+
+      // 3. Mark meeting as ready
+      await supabase
+        .from("meetings")
+        .update({ status: "ready" })
+        .eq("id", meetingId);
+
+      if (!schemaUnavailable) {
+        return {
+          summary: sRes.data as Summary,
+          actionItems: savedItems,
+        };
+      }
     }
-
-    // 3. Mark meeting as ready
-    await supabase
-      .from("meetings")
-      .update({ status: "ready" })
-      .eq("id", meetingId);
-
-    return {
-      summary: sRes.data as Summary,
-      actionItems: savedItems,
-    };
   }
 
   // Fallback
@@ -664,13 +707,17 @@ export async function saveResults(
  * Lists meetings where user is host or participant, ordered by started_at DESC.
  */
 export async function listMeetingsForUser(userId: string): Promise<Meeting[]> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
 
-    const { data: participations } = await supabase
+    const { data: participations, error: participationError } = await supabase
       .from("participants")
       .select("meeting_id")
       .eq("user_id", userId);
+
+    if (participationError && !useMockAfterSchemaError(participationError)) {
+      throw new Error(`Failed to list meeting participants: ${participationError.message}`);
+    }
 
     const participantMeetingIds = Array.from(
       new Set((participations || []).map((p) => p.meeting_id))
@@ -688,10 +735,10 @@ export async function listMeetingsForUser(userId: string): Promise<Meeting[]> {
     const { data, error } = await query.order("started_at", {
       ascending: false,
     });
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to list meetings: ${error.message}`);
     }
-    return (data as Meeting[]) || [];
+    if (!error) return (data as Meeting[]) || [];
   }
 
   // Fallback
@@ -722,7 +769,7 @@ export async function listMeetingsForUser(userId: string): Promise<Meeting[]> {
 export async function getTodosForUser(
   userId: string
 ): Promise<Array<ActionItem & { meeting_title?: string }>> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("action_items")
@@ -730,15 +777,19 @@ export async function getTodosForUser(
       .eq("owner_id", userId)
       .order("due_date", { ascending: true, nullsFirst: false });
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to get todos for user: ${error.message}`);
     }
+
+    if (error) {
+      // Fall through to the in-memory demo store while the SQL schema is absent.
+    } else {
 
     type DbItem = ActionItem & {
       meetings?: { title: string } | null;
     };
 
-    return ((data as DbItem[]) || []).map((item) => ({
+      return ((data as DbItem[]) || []).map((item) => ({
       id: item.id,
       meeting_id: item.meeting_id,
       owner_id: item.owner_id,
@@ -751,7 +802,8 @@ export async function getTodosForUser(
       t_ms: item.t_ms,
       created_at: item.created_at,
       meeting_title: item.meetings?.title,
-    }));
+      }));
+    }
   }
 
   // Fallback
@@ -782,7 +834,7 @@ export async function getTodosForUser(
  * Fetches a single action item by ID.
  */
 export async function getActionItem(id: string): Promise<ActionItem | null> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("action_items")
@@ -790,10 +842,10 @@ export async function getActionItem(id: string): Promise<ActionItem | null> {
       .eq("id", id)
       .maybeSingle();
 
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to get action item: ${error.message}`);
     }
-    return (data as ActionItem) || null;
+    if (!error) return (data as ActionItem) || null;
   }
 
   // Fallback
@@ -813,7 +865,7 @@ export async function updateTodoStatus(
   userId: string,
   status: "todo" | "done"
 ): Promise<ActionItem> {
-  if (isSupabaseConfigured()) {
+  if (shouldUseSupabase()) {
     const supabase = getSupabaseServerClient();
     let query = supabase
       .from("action_items")
@@ -825,10 +877,10 @@ export async function updateTodoStatus(
     }
 
     const { data, error } = await query.select().single();
-    if (error) {
+    if (error && !useMockAfterSchemaError(error)) {
       throw new Error(`Failed to update todo status: ${error.message}`);
     }
-    return data as ActionItem;
+    if (!error) return data as ActionItem;
   }
 
   // Fallback

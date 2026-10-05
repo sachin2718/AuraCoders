@@ -383,29 +383,32 @@ export default function DashboardPage() {
             {meetings.map((item) => {
               const isReady = item.status === "ready";
               const isLive = item.status === "live";
+              const isFailed = item.status === "failed";
 
               const handleOpen = () => {
                 if (isReady) {
                   router.push(`/summary/${encodeURIComponent(item.id)}`);
                 } else if (isLive) {
                   router.push(`/meeting/${encodeURIComponent(item.code)}?meetingId=${encodeURIComponent(item.id)}`);
+                } else if (isFailed) {
+                  router.push(`/summary/${encodeURIComponent(item.id)}`);
                 }
               };
 
               return (
                 <div
                   key={item.id}
-                  role={isReady || isLive ? "button" : undefined}
-                  tabIndex={isReady || isLive ? 0 : undefined}
+                  role={isReady || isLive || isFailed ? "button" : undefined}
+                  tabIndex={isReady || isLive || isFailed ? 0 : undefined}
                   onClick={handleOpen}
                   onKeyDown={(e) => {
-                    if ((e.key === "Enter" || e.key === " ") && (isReady || isLive)) {
+                    if ((e.key === "Enter" || e.key === " ") && (isReady || isLive || isFailed)) {
                       e.preventDefault();
                       handleOpen();
                     }
                   }}
                   className={`group flex flex-col justify-between gap-4 rounded-xl border border-[#E5DDD5] bg-white p-4 shadow-sm transition-all sm:flex-row sm:items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#722F37] dark:border-[#3E2D28] dark:bg-[#231815] ${
-                    isReady || isLive
+                    isReady || isLive || isFailed
                       ? "cursor-pointer hover:border-[#722F37] hover:shadow-md dark:hover:border-[#9C4B5D]"
                       : ""
                   }`}
@@ -458,6 +461,21 @@ export default function DashboardPage() {
                       >
                         Rejoin
                         <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      </Button>
+                    )}
+
+                    {isFailed && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/summary/${encodeURIComponent(item.id)}`);
+                        }}
+                        className="border-[#8A2525]/30 text-[#8A2525] hover:bg-[#FDF0F0] dark:text-[#E69393] dark:hover:bg-[#381B1B]"
+                      >
+                        Retry
+                        <RotateCw className="ml-1 h-3.5 w-3.5" />
                       </Button>
                     )}
                   </div>
