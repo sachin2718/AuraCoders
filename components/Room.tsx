@@ -441,9 +441,12 @@ export default function Room({
     let cancelled = false;
     async function prepare() {
       try {
-        const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
-<<<<<<< HEAD
-        const user = await getMeetingUser(localName, suppliedUserId);
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        const localName = new URLSearchParams(search).get("name") ?? undefined;
+        const queryUserId = new URLSearchParams(search).get("userId") ?? undefined;
+        const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
+
+        const user = await getMeetingUser(localName, effectiveUserId);
         
         let meeting: { id: string; host_id?: string | null } | null = null;
         if (suppliedMeetingId) {
@@ -456,30 +459,20 @@ export default function Room({
           }
         }
 
-=======
-        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
-        const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
-
-        const user = await getMeetingUser(localName, effectiveUserId);
-        const meeting = await api.findMeetingByCode(code);
->>>>>>> ab7b6ddf0fb220d96ff8f346d323e74f1d64c618
         if (cancelled) return;
 
         setMeetingId(meeting.id);
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
-<<<<<<< HEAD
-        setUserId(suppliedUserId?.trim() || user.id || meeting.host_id || "user-priya-01");
-=======
 
-        // Resolve user ID: explicit prop -> query param -> auth session -> mock fallback
+        // Resolve user ID: explicit prop -> query param -> auth session -> host fallback
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
-          (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null);
+          meeting.host_id ||
+          "user-priya-01";
         setUserId(resolvedUserId);
 
->>>>>>> ab7b6ddf0fb220d96ff8f346d323e74f1d64c618
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
@@ -503,17 +496,17 @@ export default function Room({
     if (!consented || joining) return;
     setJoining(true);
     setJoinError(null);
-    if (!meetingId || !userId) {
-      setJoining(false);
-      setJoinError("Meeting metadata is missing. Ask P1 to include meetingId and userId in the meeting URL.");
-      return;
-    }
+
+    const effectiveMeetingId = meetingId || `demo-${code.toLowerCase()}`;
+    const effectiveUserId = userId || `user-${Math.floor(Math.random() * 9000) + 1000}`;
+    setMeetingId(effectiveMeetingId);
+    setUserId(effectiveUserId);
 
     try {
-      const response = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/consent`, {
+      const response = await fetch(`/api/meetings/${encodeURIComponent(effectiveMeetingId)}/consent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId: effectiveUserId }),
       });
       if (!response.ok) throw new Error(`Consent could not be recorded (${response.status}).`);
     } catch (cause) {
