@@ -19,6 +19,7 @@ import AssistantTile from "./AssistantTile";
 import ChatPanel from "./ChatPanel";
 import Lobby from "./Lobby";
 import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
+import MeetMateAssistant from "./MeetMateAssistant";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
 import { useVisualShare } from "../lib/visual";
@@ -398,6 +399,7 @@ function InCall({
         {endError && <span role="alert" className="text-red-300">{endError}</span>}
       </div>
       <RoomAudioRenderer />
+      <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
     </div>
   );
 }
@@ -442,9 +444,10 @@ export default function Room({
     async function prepare() {
       try {
         const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
-<<<<<<< HEAD
-        const user = await getMeetingUser(localName, suppliedUserId);
-        
+        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
+        const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
+        const user = await getMeetingUser(localName, effectiveUserId);
+
         let meeting: { id: string; host_id?: string | null } | null = null;
         if (suppliedMeetingId) {
           meeting = { id: suppliedMeetingId, host_id: suppliedHostId || null };
@@ -455,31 +458,16 @@ export default function Room({
             meeting = { id: `demo-${code.toLowerCase()}`, host_id: "user-priya-01" };
           }
         }
-
-=======
-        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
-        const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
-
-        const user = await getMeetingUser(localName, effectiveUserId);
-        const meeting = await api.findMeetingByCode(code);
->>>>>>> ab7b6ddf0fb220d96ff8f346d323e74f1d64c618
         if (cancelled) return;
 
         setMeetingId(meeting.id);
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
-<<<<<<< HEAD
-        setUserId(suppliedUserId?.trim() || user.id || meeting.host_id || "user-priya-01");
-=======
-
-        // Resolve user ID: explicit prop -> query param -> auth session -> mock fallback
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
           (process.env.NEXT_PUBLIC_MOCK === "true" ? meeting.host_id ?? null : null);
         setUserId(resolvedUserId);
-
->>>>>>> ab7b6ddf0fb220d96ff8f346d323e74f1d64c618
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
