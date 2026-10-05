@@ -1,0 +1,39 @@
+{
+  "meetingId": "00000000-0000-0000-0000-000000000001",
+  "meetingDate": "2025-03-14",
+  "timezone": "Asia/Kolkata",
+  "participants": [
+    { "user_id": "usr_alice",   "display_name": "Alice Chen" },
+    { "user_id": "usr_bob",     "display_name": "Bob Sharma" },
+    { "user_id": "usr_carol",   "display_name": "Carol Davis" },
+    { "user_id": "usr_dan",     "display_name": "Dan Okonkwo" }
+  ],
+  "segments": [
+    { "speaker_name": "Alice Chen",   "text": "Good morning everyone, let's do a quick standup. Bob, you want to start?", "t_ms": 5000 },
+    { "speaker_name": "Bob Sharma",   "text": "Sure. Yesterday I finished the database migration script and deployed it to staging. It's looking solid.", "t_ms": 12000 },
+    { "speaker_name": "Bob Sharma",   "text": "Today I'll be writing unit tests for the migration and then picking up the auth module story.", "t_ms": 21000 },
+    { "speaker_name": "Bob Sharma",   "text": "I'm blocked on getting the Supabase service role key from DevOps. Dan, can you send that over by end of day?", "t_ms": 30000 },
+    { "speaker_name": "Dan Okonkwo",  "text": "Absolutely, I'll send the Supabase service role key to you by 5 PM today.", "t_ms": 38000 },
+    { "speaker_name": "Alice Chen",   "text": "Great. Carol, your turn.", "t_ms": 44000 },
+    { "speaker_name": "Carol Davis",  "text": "Yesterday I completed the design mockups for the meeting room page. I shared them in Figma, please review when you can.", "t_ms": 51000 },
+    { "speaker_name": "Carol Davis",  "text": "Today I'm starting on the summary page design. I expect to have a first draft ready by EOD.", "t_ms": 62000 },
+    { "speaker_name": "Carol Davis",  "text": "No blockers on my end.", "t_ms": 70000 },
+    { "speaker_name": "Alice Chen",   "text": "Perfect. I'll review your Figma mockups this afternoon, Carol, and leave comments.", "t_ms": 76000 },
+    { "speaker_name": "Alice Chen",   "text": "Yesterday I had syncs with the client and stakeholders. They confirmed go-live is March 28th — that's our hard deadline, team.", "t_ms": 84000 },
+    { "speaker_name": "Alice Chen",   "text": "Today I'm drafting the deployment checklist and then reaching out to Vercel support about our bandwidth limit on the Hobby plan.", "t_ms": 96000 },
+    { "speaker_name": "Bob Sharma",   "text": "Quick question — do we need to write end-to-end tests before the March 28th go-live, or is that a stretch goal?", "t_ms": 108000 },
+    { "speaker_name": "Alice Chen",   "text": "Good question. Let's make end-to-end tests a hard requirement. Bob, can you own that along with Carol?", "t_ms": 116000 },
+    { "speaker_name": "Bob Sharma",   "text": "Yep, Carol and I will pair on end-to-end tests. We'll target having them done by March 25th.", "t_ms": 124000 },
+    { "speaker_name": "Carol Davis",  "text": "Agreed, March 25th works for me.", "t_ms": 130000 },
+    { "speaker_name": "Dan Okonkwo",  "text": "One more thing — I noticed the LiveKit token endpoint isn't rate-limited yet. We should add rate limiting before go-live.", "t_ms": 138000 },
+    { "speaker_name": "Alice Chen",   "text": "Good catch Dan. Dan, please add rate limiting to the LiveKit token endpoint by March 22nd.", "t_ms": 146000 },
+    { "speaker_name": "Dan Okonkwo",  "text": "Will do, I'll have rate limiting on the token endpoint done by March 22nd.", "t_ms": 154000 },
+    { "speaker_name": "Alice Chen",   "text": "Alright, anything else before we wrap? Any open questions?", "t_ms": 162000 },
+    { "speaker_name": "Bob Sharma",   "text": "Still not sure who handles load testing after the release. Should we loop in the DevOps team?", "t_ms": 170000 },
+    { "speaker_name": "Alice Chen",   "text": "Let's leave that as an open question for now and decide in Monday's planning session.", "t_ms": 178000 },
+    { "speaker_name": "Alice Chen",   "text": "Great standup everyone. Let's have a great day and hit that March 28th deadline!", "t_ms": 185000 }
+  ],
+  "visualNotes": [
+    { "t_ms": 84000, "description": "Shared screen showing project timeline — go-live circled on March 28th." }
+  ]
+}
