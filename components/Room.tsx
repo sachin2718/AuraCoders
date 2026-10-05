@@ -580,7 +580,9 @@ function InCall({
           <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
           <button type="button" aria-label="More meeting options" className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
         </div>
-        <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+      </div>
+
+      <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-700/80 bg-[#0b1220] shadow-2xl shadow-black/10">
           <div className="flex items-center justify-between gap-3 border-b border-slate-800 px-4 py-3">
             <div className="flex items-center gap-2 text-xs text-slate-300"><UsersRound className="h-4 w-4 text-indigo-300" /> Participants <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px]">{tracks.length || 1}</span></div>
@@ -617,7 +619,7 @@ function InCall({
               </div>
             ) : (
               <ControlBar variation="verbose" controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }} onDeviceError={({ source, error }) => onNotice({ kind: "error", message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}` })} />
-            )}90921a46bbe818e5
+            )}
             <button
               type="button"
               aria-pressed={captionsEnabled}
