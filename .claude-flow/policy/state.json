@@ -6,7 +6,7 @@
   "usage": [],
   "approvals": [],
   "receipts": [
-    {
+    { 
       "payload": {
         "receiptId": "sha256:9af362b08cba08bd6d67128714130c3755b963b670b191d6f5bbc687cc155ea2",
         "previousReceiptHash": null,
