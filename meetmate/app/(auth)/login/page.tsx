@@ -20,13 +20,8 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-<<<<<<< HEAD
         <div className="min-h-screen bg-[#1A110E] flex items-center justify-center text-[#B89F96]">
           <Loader2 className="animate-spin mr-2" size={20} /> Loading...
-=======
-        <div className="min-h-screen bg-[#18110E] flex items-center justify-center text-[#A89F91]">
-          Loading...
->>>>>>> 168fab069f7bffc318788b3dc5b7ddeedde02362
         </div>
       }
     >

@@ -237,7 +237,7 @@ export function createBrowserClient() {
     return stub as any;
   }
 
-  return _browser(SUPABASE_URL, SUPABASE_ANON!);
+  return _browser(SUPABASE_URL!, SUPABASE_ANON!);
 }
 
 export async function createServerClient() {
@@ -267,7 +267,7 @@ export async function createServerClient() {
   const { cookies } = await import("next/headers");
   const cookieStore = await cookies();
 
-  return _server(SUPABASE_URL, SUPABASE_ANON!, {
+  return _server(SUPABASE_URL!, SUPABASE_ANON!, {
     cookies: {
       get(name: string) {
         return cookieStore.get(name)?.value;

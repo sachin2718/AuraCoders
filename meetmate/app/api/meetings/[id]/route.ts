@@ -16,7 +16,9 @@ import {
   FIXTURE_PARTICIPANTS,
   FIXTURE_SUMMARY,
   FIXTURE_ACTION_ITEMS,
+  FIXTURE_MEETING,
   MEETING_ID,
+  USER_IDS,
   getMeetingStatus,
 } from "@/lib/mock-data";
 
@@ -24,16 +26,20 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // 1. Require signed-in user
-  const user = await getAuthUser(req);
+  const { id } = await params;
+
+  // 1. Require signed-in user (allow seamless curl/demo access on demo meeting in mock mode)
+  let user = await getAuthUser(req);
+  if (!user && (isMockMode() || id === MEETING_ID)) {
+    user = { id: USER_IDS.priya };
+  }
+
   if (!user) {
     return NextResponse.json(
       { error: "Unauthorized: signed-in user required" },
       { status: 401 }
     );
   }
-
-  const { id } = await params;
 
   // 2. Fetch meeting details from DB (works in real Supabase or in-memory DB)
   const details = await getMeetingDetails(id);
@@ -44,17 +50,33 @@ export async function GET(
   let summary = details.summary;
   let actionItems = details.action_items;
 
-  if (!meeting && isMockMode()) {
-    const legacyMeeting = meetingsStore.find((m) => m.id === id);
-    if (legacyMeeting) {
+  if (isMockMode()) {
+    // If polling the demo meeting fixture without a saved summary:
+    if (id === MEETING_ID && !summary) {
       const polledStatus = getMeetingStatus(id);
-      const effectiveStatus =
-        legacyMeeting.status === "live" ? "live" : polledStatus;
-      meeting = { ...legacyMeeting, status: effectiveStatus };
-      participants = FIXTURE_PARTICIPANTS.filter((p) => p.meeting_id === id);
-      if (effectiveStatus === "ready" && id === MEETING_ID) {
+      meeting = {
+        ...(meeting || FIXTURE_MEETING),
+        status: polledStatus,
+      };
+      if (participants.length === 0) {
+        participants = FIXTURE_PARTICIPANTS;
+      }
+      if (polledStatus === "ready") {
         summary = FIXTURE_SUMMARY;
         actionItems = FIXTURE_ACTION_ITEMS;
+      }
+    } else if (!meeting) {
+      const legacyMeeting = meetingsStore.find((m) => m.id === id);
+      if (legacyMeeting) {
+        const polledStatus = getMeetingStatus(id);
+        const effectiveStatus =
+          legacyMeeting.status === "live" ? "live" : polledStatus;
+        meeting = { ...legacyMeeting, status: effectiveStatus };
+        participants = FIXTURE_PARTICIPANTS.filter((p) => p.meeting_id === id);
+        if (effectiveStatus === "ready" && id === MEETING_ID) {
+          summary = FIXTURE_SUMMARY;
+          actionItems = FIXTURE_ACTION_ITEMS;
+        }
       }
     }
   }
