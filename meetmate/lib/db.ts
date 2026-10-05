@@ -9,13 +9,13 @@
  * - Provides zero-config in-memory fallback for local testing & CI without live Supabase.
  */
 
+import { getSupabaseServerClient, isSupabaseConfigured } from "./supabase";
+
 if (typeof window !== "undefined") {
   throw new Error(
     "Security Violation: lib/db.ts is a server-only database module and must never be imported in client components."
   );
 }
-
-import { getSupabaseServerClient, isSupabaseConfigured } from "./supabase";
 
 // ─── Entity Types ────────────────────────────────────────────────────────────
 

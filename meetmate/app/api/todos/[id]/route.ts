@@ -17,7 +17,7 @@ import { getActionItem, updateTodoStatus } from "@/lib/db";
 
 const PatchTodoSchema = z.object({
   status: z.enum(["todo", "done"], {
-    errorMap: () => ({ message: "status must be 'todo' or 'done'" }),
+    message: "status must be 'todo' or 'done'",
   }),
 });
 
