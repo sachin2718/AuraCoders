@@ -53,10 +53,24 @@ export async function getLiveKitCredentials(code: string, displayName: string): 
     }
   }
 
+  // Persist a stable client ID in localStorage so the same browser tab
+  // always maps to the same LiveKit participant identity across reconnects.
+  let clientId: string | undefined;
+  try {
+    const storageKey = `meetmate_client_id_${code}`;
+    clientId = localStorage.getItem(storageKey) ?? undefined;
+    if (!clientId) {
+      clientId = Math.random().toString(36).substring(2, 10);
+      localStorage.setItem(storageKey, clientId);
+    }
+  } catch {
+    // localStorage unavailable (private mode, SSR, etc.) — no stable ID
+  }
+
   const response = await fetch("/api/livekit-token", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, displayName }),
+    body: JSON.stringify({ code, displayName, clientId }),
   });
 
   if (response.ok) {

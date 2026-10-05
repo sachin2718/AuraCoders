@@ -7,19 +7,23 @@ import { getMeetingByCode, upsertParticipant } from "@/lib/db";
 const TokenRequestSchema = z.object({
   code: z.string().trim().min(1).max(100),
   displayName: z.string().trim().min(1).max(100),
+  // Optional stable client ID so the same browser tab always gets the same identity
+  clientId: z.string().trim().max(128).optional(),
 });
+
+/**
+ * Derives a stable, deterministic user identity from displayName + room code.
+ * This ensures the same participant is recognised consistently across reconnects
+ * and across server restarts, without needing Supabase auth.
+ */
+function deriveStableIdentity(displayName: string, code: string, extra?: string): string {
+  const base = `${displayName.toLowerCase().replace(/\s+/g, "-")}-${code.toLowerCase()}`;
+  if (extra) return `${base}-${extra.substring(0, 8)}`;
+  return base;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    let user = await getAuthUser(req);
-    if (!user) {
-      if (isMockMode() || process.env.NODE_ENV !== "production") {
-        user = { id: `user-${Math.random().toString(36).substring(2, 9)}`, email: "demo@meetmate.dev" };
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-
     let body: unknown;
     try {
       body = await req.json();
@@ -33,7 +37,21 @@ export async function POST(req: NextRequest) {
         { status: 422 },
       );
     }
-    const { code, displayName } = parsed.data;
+    const { code, displayName, clientId } = parsed.data;
+
+    // Determine user identity
+    let user = await getAuthUser(req);
+    if (!user) {
+      if (isMockMode() || process.env.NODE_ENV !== "production") {
+        // Use stable identity based on display name + room code so same person
+        // is recognized across reconnects. clientId (from localStorage) makes
+        // it unique when the same name is used by two different people.
+        const stableId = deriveStableIdentity(displayName, code, clientId);
+        user = { id: stableId, email: "guest@meetmate.dev" };
+      } else {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
 
     const meeting = await getMeetingByCode(code);
     if (!meeting && !isMockMode() && process.env.NODE_ENV === "production") {
