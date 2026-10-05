@@ -87,31 +87,33 @@ async function runTest() {
 
   // 4. Test LiveKit data message broadcast & handling
   console.log("\n[Test 4] LiveKit broadcast {type:'meeting-ended'} and media release...");
-  let micTrackStopped = false;
-  let cameraTrackStopped = false;
-  let nativeMicStopped = false;
-  let speechRecognitionAborted = false;
-  let redirectedTo: string | null = null;
+  const state = {
+    micTrackStopped: false,
+    cameraTrackStopped: false,
+    nativeMicStopped: false,
+    speechRecognitionAborted: false,
+    redirectedTo: null as string | null,
+  };
 
   // Mock participant client state
   const mockLocalParticipant = {
     setMicrophoneEnabled: async (enabled: boolean) => {
-      if (!enabled) micTrackStopped = true;
+      if (!enabled) state.micTrackStopped = true;
     },
     setCameraEnabled: async (enabled: boolean) => {
-      if (!enabled) cameraTrackStopped = true;
+      if (!enabled) state.cameraTrackStopped = true;
     },
     setScreenShareEnabled: async () => {},
     trackPublications: new Map([
       ["audio-track", {
         track: {
-          stop: () => { micTrackStopped = true; },
-          mediaStreamTrack: { stop: () => { nativeMicStopped = true; } },
+          stop: () => { state.micTrackStopped = true; },
+          mediaStreamTrack: { stop: () => { state.nativeMicStopped = true; } },
         },
       }],
       ["video-track", {
         track: {
-          stop: () => { cameraTrackStopped = true; },
+          stop: () => { state.cameraTrackStopped = true; },
           mediaStreamTrack: { stop: () => {} },
         },
       }],
@@ -121,14 +123,14 @@ async function runTest() {
   const mockRoom = {
     disconnect: async (stopTracks?: boolean) => {
       if (stopTracks) {
-        micTrackStopped = true;
-        cameraTrackStopped = true;
+        state.micTrackStopped = true;
+        state.cameraTrackStopped = true;
       }
     },
   };
 
   const mockSpeechRecognition = {
-    abort: () => { speechRecognitionAborted = true; },
+    abort: () => { state.speechRecognitionAborted = true; },
     stop: () => {},
   };
 
@@ -151,18 +153,18 @@ async function runTest() {
   const decoded = JSON.parse(new TextDecoder().decode(broadcastPacket));
   if (decoded.type === "meeting-ended") {
     await releaseMedia();
-    redirectedTo = `/summary/${meeting.id}`;
+    state.redirectedTo = `/summary/${meeting.id}`;
   }
 
-  assert(redirectedTo === `/summary/${meeting.id}`, `Expected redirect to /summary/${meeting.id}, got ${redirectedTo}`);
-  assert(micTrackStopped === true, "Microphone track must be stopped");
-  assert(nativeMicStopped === true, "Native MediaStreamTrack must be stopped (mic light off)");
-  assert(cameraTrackStopped === true, "Camera track must be stopped");
-  assert(speechRecognitionAborted === true, "Speech recognition must be aborted");
+  assert(state.redirectedTo === `/summary/${meeting.id}`, `Expected redirect to /summary/${meeting.id}, got ${state.redirectedTo}`);
+  assert(state.micTrackStopped, "Microphone track must be stopped");
+  assert(state.nativeMicStopped, "Native MediaStreamTrack must be stopped (mic light off)");
+  assert(state.cameraTrackStopped, "Camera track must be stopped");
+  assert(state.speechRecognitionAborted, "Speech recognition must be aborted");
   console.log(`✓ Non-host received {type:'meeting-ended'}:
-  - Redirected to: ${redirectedTo}
-  - Speech recognition aborted: ${speechRecognitionAborted}
-  - MediaStreamTrack stopped (mic light turns off): ${nativeMicStopped}`);
+  - Redirected to: ${state.redirectedTo}
+  - Speech recognition aborted: ${state.speechRecognitionAborted}
+  - MediaStreamTrack stopped (mic light turns off): ${state.nativeMicStopped}`);
 
   // 5. Test Room Disconnection fallback when meeting status != "live"
   console.log("\n[Test 5] Room disconnection fallback when meeting status != live...");

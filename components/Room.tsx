@@ -12,7 +12,7 @@ import {
 } from "@livekit/components-react";
 import { MediaDeviceFailure, RoomEvent, Track } from "livekit-client";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PhoneOff, LogOut } from "lucide-react";
 import "@livekit/components-styles";
 import AssistantTile from "./AssistantTile";
@@ -21,6 +21,7 @@ import Lobby from "./Lobby";
 import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
+import { useVisualShare } from "../lib/visual";
 import { api } from "../lib/api";
 
 type RoomProps = {
@@ -89,6 +90,34 @@ function InCall({
     { source: Track.Source.Camera, withPlaceholder: true },
     { source: Track.Source.ScreenShare, withPlaceholder: true },
   ]);
+  const screenShareTracks = useTracks([
+    { source: Track.Source.ScreenShare, withPlaceholder: false },
+  ]);
+
+  // Track the local participant's active screen share track
+  const localScreenShareTrack = useMemo(() => {
+    const localRef = screenShareTracks.find(
+      (t) => t.participant.isLocal && t.publication?.track && !t.publication.isMuted
+    );
+    if (localRef?.publication?.track?.mediaStreamTrack) {
+      return localRef.publication.track.mediaStreamTrack;
+    }
+    const pub = localParticipant.getTrackPublication(Track.Source.ScreenShare);
+    if (pub?.track?.mediaStreamTrack && !pub.isMuted) {
+      return pub.track.mediaStreamTrack;
+    }
+    return null;
+  }, [screenShareTracks, localParticipant]);
+
+  // When any participant shares their screen, the sharer's browser captures
+  // a frame every 10s and POSTs to /api/visual (max 1024px, JPEG 0.6, diff check, max 20 frames)
+  useVisualShare({
+    meetingId,
+    startedAt,
+    localTrack: localScreenShareTrack,
+    maxFrames: 20,
+    intervalMs: 10000,
+  });
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
   const [savingTranscript, setSavingTranscript] = useState(false);
