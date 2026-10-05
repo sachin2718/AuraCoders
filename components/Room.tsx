@@ -3,6 +3,7 @@
 import {
   ControlBar,
   GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -357,7 +358,7 @@ function InCall({
         <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
           <ControlBar
             variation="verbose"
-            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
+            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }}
             onDeviceError={({ source, error }) => onNotice({
               kind: "error",
               message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
@@ -575,19 +576,21 @@ export default function Room({
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} />
-        <InCall
-          code={code}
-          displayName={displayName}
-          consented={consented}
-          meetingId={meetingId}
-          hostId={hostId}
-          userId={userId}
-          startedAt={sessionStartedAt}
-          onNotice={handleNotice}
-          onMeetingEnded={navigateToSummary}
-          onLeave={() => router.push("/dashboard")}
-        />
+        <LayoutContextProvider>
+          <ConnectionNotices onNotice={handleNotice} />
+          <InCall
+            code={code}
+            displayName={displayName}
+            consented={consented}
+            meetingId={meetingId}
+            hostId={hostId}
+            userId={userId}
+            startedAt={sessionStartedAt}
+            onNotice={handleNotice}
+            onMeetingEnded={navigateToSummary}
+            onLeave={() => router.push("/dashboard")}
+          />
+        </LayoutContextProvider>
       </LiveKitRoom>
     </main>
   );
