@@ -1,7 +1,7 @@
 /**
  * POST /api/transcribe — server-side STT fallback for the Electron desktop app
  * Accepts multipart/form-data: {meetingId, speakerName, tMs, audio (binary)}
- * Stub: echoes back a canned transcript sentence without calling a real STT API.
+ * Uses Groq Whisper with the same server-side GROQ_API_KEY as the assistant.
  *
  * SECURITY:
  * - Requires a signed-in user (401).
@@ -13,8 +13,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getAuthUser, isMockMode } from "@/lib/auth";
-import { getMeetingData } from "@/lib/db";
+import { getMeetingData, insertSegment } from "@/lib/db";
 import { meetingsStore, FIXTURE_PARTICIPANTS } from "@/lib/mock-data";
+import { transcribeGroqAudio } from "@/lib/ai/groq";
 
 const TranscribeFieldsSchema = z.object({
   meetingId: z.string().min(1, "meetingId is required"),
@@ -22,7 +23,7 @@ const TranscribeFieldsSchema = z.object({
   tMs: z.coerce.number().int().nonnegative("tMs must be a non-negative integer"),
 });
 
-const STUB_TRANSCRIPTIONS = [
+const MOCK_TRANSCRIPTIONS = [
   "This is a stub transcription from the server-side speech-to-text fallback.",
   "The Electron wrapper uses this endpoint when the Web Speech API is unavailable.",
   "Audio received and processed — stub returns canned text for now.",
@@ -71,11 +72,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!audio) {
+    if (!(audio instanceof Blob)) {
       return NextResponse.json(
         { error: "Validation failed", issues: [{ path: ["audio"], message: "audio file is required" }] },
         { status: 422 }
       );
+    }
+
+    if (audio.size > 3 * 1024 * 1024) {
+      return NextResponse.json({ error: "Audio must be 3 MB or smaller" }, { status: 413 });
     }
 
     const { meetingId } = parsed.data;
@@ -107,10 +112,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const text = STUB_TRANSCRIPTIONS[_idx % STUB_TRANSCRIPTIONS.length];
-    _idx++;
+    const text = process.env.GROQ_API_KEY
+      ? await transcribeGroqAudio(audio, audio instanceof File ? audio.name : "meetmate-audio.webm")
+      : isMockMode()
+        ? MOCK_TRANSCRIPTIONS[_idx++ % MOCK_TRANSCRIPTIONS.length]
+        : "";
 
-    return NextResponse.json({ text });
+    if (text) {
+      await insertSegment({
+        meetingId,
+        speakerId: user.id,
+        speakerName: parsed.data.speakerName,
+        text: text.slice(0, 2000),
+        tMs: parsed.data.tMs,
+      });
+    }
+
+    return NextResponse.json({ text: text.slice(0, 2000) });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

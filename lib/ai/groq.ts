@@ -8,6 +8,11 @@ type GroqResponse = {
   error?: { message?: string };
 };
 
+type GroqTranscriptionResponse = {
+  text?: string;
+  error?: { message?: string };
+};
+
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
 const FALLBACK_MODEL = "llama-3.1-8b-instant";
@@ -55,4 +60,39 @@ export async function callGroq(messages: GroqMessage[]): Promise<string> {
   }
 
   throw new Error(lastError);
+}
+
+/**
+ * Transcribe a short audio clip with Groq Whisper.
+ * This function is server-only by convention: the API key is read from the
+ * server environment and is never sent to the browser.
+ */
+export async function transcribeGroqAudio(
+  audio: Blob,
+  filename = "meetmate-audio.webm",
+): Promise<string> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) {
+    throw new Error("GROQ_API_KEY is not configured on the server.");
+  }
+
+  const form = new FormData();
+  form.append("file", audio, filename);
+  form.append("model", process.env.GROQ_TRANSCRIPTION_MODEL || "whisper-large-v3-turbo");
+  form.append("response_format", "json");
+  form.append("language", "en");
+
+  const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+    signal: AbortSignal.timeout(30_000),
+  });
+  const data = (await response.json().catch(() => ({}))) as GroqTranscriptionResponse;
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || `Groq transcription failed (${response.status}).`);
+  }
+
+  return data.text?.trim() || "";
 }

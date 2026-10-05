@@ -32,6 +32,7 @@
   - Meeting notes
   - Risks and open questions
 - Added `POST /api/assistant` with Groq-backed structured responses for replies, notes, tasks, source quotes, priorities, and deadlines.
+- Connected the server-side audio transcription fallback to Groq Whisper using the same `GROQ_API_KEY` (with a mock fallback when no key is configured locally).
 - Added demo-mode context handling so the assistant can still answer when a local/demo meeting has no database row yet.
 - The assistant is mounted in the lobby and remains available after joining the LiveKit room.
 - The assistant is also mounted by `app/summary/layout.tsx` and `app/todos/layout.tsx`.
@@ -79,6 +80,8 @@ The repository currently contains routes for:
 
 - `components/Room.tsx` — mounts the assistant in the lobby as well as the room.
 - `app/api/assistant/route.ts` — supports demo meeting context when no database meeting exists.
+- `app/api/transcribe/route.ts` — sends uploaded fallback audio to Groq Whisper and stores the resulting transcript segment.
+- `lib/ai/groq.ts` — keeps both assistant chat and Whisper transcription behind server-only Groq helpers.
 - `app/summary/layout.tsx` — exposes the assistant on meeting summaries.
 - `app/todos/layout.tsx` — exposes the assistant on the member's task list.
 - `progress1.md` — this progress report.
