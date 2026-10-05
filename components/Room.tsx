@@ -3,6 +3,7 @@
 import {
   ControlBar,
   GridLayout,
+  LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
@@ -357,7 +358,7 @@ function InCall({
         <div className="flex justify-center items-center border-t border-slate-700 bg-slate-900/80 p-3">
           <ControlBar
             variation="verbose"
-            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: true }}
+            controls={{ microphone: true, camera: true, screenShare: true, leave: false, chat: false, settings: false }}
             onDeviceError={({ source, error }) => onNotice({
               kind: "error",
               message: permissionMessage(error) ?? `Could not start ${source === Track.Source.Microphone ? "microphone" : source === Track.Source.Camera ? "camera" : "device"}: ${error.message}`,
@@ -441,9 +442,14 @@ export default function Room({
     let cancelled = false;
     async function prepare() {
       try {
+<<<<<<< HEAD
         const search = typeof window !== "undefined" ? window.location.search : "";
         const localName = new URLSearchParams(search).get("name") ?? undefined;
         const queryUserId = new URLSearchParams(search).get("userId") ?? undefined;
+=======
+        const localName = new URLSearchParams(window.location.search).get("name") ?? undefined;
+        const queryUserId = new URLSearchParams(window.location.search).get("userId") ?? undefined;
+>>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const effectiveUserId = suppliedUserId?.trim() || queryUserId?.trim() || undefined;
 
         const user = await getMeetingUser(localName, effectiveUserId);
@@ -465,14 +471,21 @@ export default function Room({
         setHostId(meeting.host_id ?? undefined);
         setDisplayName(user.displayName);
 
+<<<<<<< HEAD
         // Resolve user ID: explicit prop -> query param -> auth session -> host fallback
+=======
+        // Resolve user ID: explicit prop -> query param -> auth session -> host fallback -> demo fallback
+>>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const resolvedUserId =
           effectiveUserId ||
           user.id ||
           meeting.host_id ||
           "user-priya-01";
         setUserId(resolvedUserId);
+<<<<<<< HEAD
 
+=======
+>>>>>>> e1829ef45aeb2541f8832435357f2c1158d5c38b
         const result = await getLiveKitCredentials(code, user.displayName);
         if (!cancelled) setCredentials(result);
       } catch (cause) {
@@ -577,19 +590,21 @@ export default function Room({
             : `Could not start ${device} (${failure}). Check that the device is connected and not in use.` });
         }}
       >
-        <ConnectionNotices onNotice={handleNotice} />
-        <InCall
-          code={code}
-          displayName={displayName}
-          consented={consented}
-          meetingId={meetingId}
-          hostId={hostId}
-          userId={userId}
-          startedAt={sessionStartedAt}
-          onNotice={handleNotice}
-          onMeetingEnded={navigateToSummary}
-          onLeave={() => router.push("/dashboard")}
-        />
+        <LayoutContextProvider>
+          <ConnectionNotices onNotice={handleNotice} />
+          <InCall
+            code={code}
+            displayName={displayName}
+            consented={consented}
+            meetingId={meetingId}
+            hostId={hostId}
+            userId={userId}
+            startedAt={sessionStartedAt}
+            onNotice={handleNotice}
+            onMeetingEnded={navigateToSummary}
+            onLeave={() => router.push("/dashboard")}
+          />
+        </LayoutContextProvider>
       </LiveKitRoom>
     </main>
   );
