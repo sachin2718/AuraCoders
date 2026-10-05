@@ -2,7 +2,7 @@
 
 **Updated:** 2026-10-05
 **Branch:** `meetmate`
-**Current local commit:** `518010f6`
+**Current local commit:** latest local `meetmate` commit (see `git log -1`)
 
 ## Completed
 
@@ -26,6 +26,7 @@
 ### Personal AI assistant
 
 - Added `components/MeetMateAssistant.tsx`, a floating personal assistant UI that works in the lobby and inside the room.
+- Made the assistant available on the summary and My To-Dos pages too, so members can ask about their work after leaving a call.
 - Added starter prompts for:
   - My tasks
   - Meeting notes
@@ -33,6 +34,7 @@
 - Added `POST /api/assistant` with Groq-backed structured responses for replies, notes, tasks, source quotes, priorities, and deadlines.
 - Added demo-mode context handling so the assistant can still answer when a local/demo meeting has no database row yet.
 - The assistant is mounted in the lobby and remains available after joining the LiveKit room.
+- The assistant is also mounted by `app/summary/layout.tsx` and `app/todos/layout.tsx`.
 
 ### Backend/API coverage
 
@@ -52,6 +54,7 @@ The repository currently contains routes for:
 ### Verification completed
 
 - `npx tsc --noEmit` passes after the assistant and lobby changes.
+- `npm run build` completes successfully and generates all App Router routes.
 - The public Vercel meeting URL was checked and returned HTTP 200.
 - Vercel Authentication was disabled so visitors do not need a Vercel account to open the deployment.
 - No API keys or secrets were committed to the repository.
@@ -76,4 +79,6 @@ The repository currently contains routes for:
 
 - `components/Room.tsx` — mounts the assistant in the lobby as well as the room.
 - `app/api/assistant/route.ts` — supports demo meeting context when no database meeting exists.
+- `app/summary/layout.tsx` — exposes the assistant on meeting summaries.
+- `app/todos/layout.tsx` — exposes the assistant on the member's task list.
 - `progress1.md` — this progress report.
