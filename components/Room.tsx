@@ -960,12 +960,12 @@ function InCall({
   };
 
   return (
-    <div className="flex flex-1 flex-col bg-white text-[#2B050D]">
-      <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="flex flex-1 min-h-0 h-full max-h-full flex-col overflow-hidden bg-white text-[#2B050D]">
+      <div className="grid min-h-0 flex-1 h-full max-h-full gap-3 p-2 sm:p-3 lg:grid-cols-[minmax(0,1fr)_360px] overflow-hidden">
         <section
           ref={stageContainerRef}
           data-fullscreen={isFullscreen}
-          className={`meeting-stage flex min-h-0 min-w-0 flex-col overflow-hidden bg-white shadow-md transition-all ${
+          className={`meeting-stage flex min-h-0 min-w-0 h-full max-h-full flex-col overflow-hidden bg-white shadow-md transition-all ${
             isFullscreen
               ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0"
               : "rounded-2xl border-2 border-[#F0B8C4]"
@@ -1040,20 +1040,20 @@ function InCall({
               if ((e.target as HTMLElement).closest("button")) return;
               void toggleFullscreen();
             }}
-            className="video-stage-content min-h-[360px] flex-1 p-3 bg-[#1A0307]"
+            className="video-stage-content flex-1 min-h-0 w-full h-full max-h-full overflow-hidden p-2 sm:p-3 relative flex items-center justify-center"
           >
             {!isMockLiveKit ? (
-              <div className="relative h-full w-full min-h-[360px]">
+              <div className="relative h-full w-full min-h-0 max-h-full flex-1 overflow-hidden flex items-center justify-center">
                 {tracks.length > 0 ? (
                   effectiveFocusTrack ? (
-                    <FocusLayoutContainer className="flex h-full min-h-[360px] w-full flex-col gap-3">
+                    <FocusLayoutContainer className="flex h-full w-full min-h-0 max-h-full flex-col gap-2 overflow-hidden">
                       {carouselTracks.length > 0 && (
-                        <CarouselLayout tracks={carouselTracks} className="h-28 w-full shrink-0">
+                        <CarouselLayout tracks={carouselTracks} className="h-28 w-full shrink-0 overflow-hidden">
                           <ParticipantTile />
                         </CarouselLayout>
                       )}
-                      <div className="relative flex-1 min-h-0 w-full">
-                        <FocusLayout trackRef={effectiveFocusTrack} className="h-full w-full">
+                      <div className="relative flex-1 min-h-0 max-h-full w-full overflow-hidden flex items-center justify-center">
+                        <FocusLayout trackRef={effectiveFocusTrack} className="h-full w-full max-h-full overflow-hidden">
                           <ParticipantTile />
                         </FocusLayout>
                         {/* Visible Pin overlay badge */}
@@ -1073,12 +1073,12 @@ function InCall({
                       </div>
                     </FocusLayoutContainer>
                   ) : (
-                    <GridLayout tracks={tracks} className="h-full min-h-[360px] w-full">
+                    <GridLayout tracks={tracks} className="h-full w-full min-h-0 max-h-full overflow-hidden">
                       <ParticipantTile />
                     </GridLayout>
                   )
                 ) : (
-                  <div className="grid h-full min-h-[360px] w-full place-items-center rounded-2xl bg-[#2B050D] p-6 text-center border-2 border-[#800020]/30">
+                  <div className="flex h-full max-h-full w-full items-center justify-center rounded-2xl bg-[#1C0308] p-6 text-center border-2 border-[#800020]/30">
                     <div className="space-y-2">
                       <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       <p className="text-sm font-bold text-white">Connecting video…</p>
@@ -1088,7 +1088,7 @@ function InCall({
                 )}
               </div>
             ) : (
-              <div className="relative h-full w-full min-h-[200px]">
+              <div className="relative h-full w-full min-h-0 max-h-full flex-1 overflow-hidden flex items-center justify-center">
                 <LocalCameraStage
                   displayName={displayName}
                   cameraOn={localCamOn}
@@ -1216,8 +1216,8 @@ function InCall({
         </section>
 
         {/* Aside Panels (Transcript & Chat) */}
-        <aside className="grid min-h-[520px] min-w-0 gap-3 lg:min-h-0 lg:grid-rows-2">
-          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
+        <aside className="grid min-h-0 min-w-0 gap-3 h-full max-h-full grid-rows-2 overflow-hidden">
+          <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md h-full max-h-full">
             <TranscriptPanel
               supported={supported}
               speechError={speechError}
@@ -1226,7 +1226,7 @@ function InCall({
               onLanguageChange={handleLanguageChange}
             />
           </div>
-          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
+          <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md h-full max-h-full">
             <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
           </div>
         </aside>
@@ -1587,10 +1587,12 @@ export default function Room({
   );
 
   return (
-    <main className="min-h-screen bg-white text-[#2B050D]">
-      <Navbar />
+    <main className="h-screen max-h-screen flex flex-col bg-white text-[#2B050D] overflow-hidden">
+      <div className="shrink-0">
+        <Navbar />
+      </div>
       {/* Sleek Meeting Status Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2.5 sm:px-6">
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 border-b border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2 sm:px-6">
         <div className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#800020] text-white shadow-sm">
             <Video size={16} />
@@ -1635,6 +1637,7 @@ export default function Room({
         audio={!isMockLiveKit}
         video={!isMockLiveKit}
         options={{ adaptiveStream: true, dynacast: true }}
+        className="flex-1 min-h-0 flex flex-col overflow-hidden w-full relative h-full max-h-full"
         onConnected={() => {
           if (!isMockLiveKit) handleNotice({ kind: "info", message: "Connected to LiveKit." });
         }}

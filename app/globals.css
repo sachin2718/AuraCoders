@@ -142,11 +142,126 @@ body {
   background: #1A0307 !important;
 }
 
-.lk-participant-metadata {
-  background: rgba(128, 0, 32, 0.9) !important;
+/* ── Professional Meeting Grid & Video Stage (Bounded, Non-Growing) ────────── */
+.meeting-stage {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+.video-stage-content {
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: radial-gradient(circle at center, #1C0308 0%, #100204 100%) !important;
+}
+
+.lk-grid-layout {
+  height: 100% !important;
+  width: 100% !important;
+  max-height: 100% !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  display: grid !important;
+  align-content: center !important;
+  justify-content: center !important;
+  gap: 0.75rem !important;
+  padding: 0.5rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure 1 participant tile is centered and does not stretch unnaturally */
+.lk-grid-layout:has(> :only-child) .lk-participant-tile {
+  max-width: 920px !important;
+  max-height: 100% !important;
+  width: 100% !important;
+  margin: auto !important;
+  aspect-ratio: 16 / 9 !important;
+}
+
+/* Executive Participant Tile Styling */
+.lk-participant-tile {
+  position: relative !important;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+  background: #1E0308 !important;
+  border: 1.5px solid rgba(128, 0, 32, 0.45) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
+  max-height: 100% !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  aspect-ratio: 16 / 9 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.lk-participant-tile:hover {
+  border-color: rgba(240, 184, 196, 0.6) !important;
+}
+
+/* Active Speaker Halo */
+.lk-participant-tile[data-speaking="true"],
+.lk-participant-tile.lk-speaking {
+  border-color: #FFFFFF !important;
+  box-shadow: 0 0 0 2px #FFFFFF, 0 0 24px rgba(240, 184, 196, 0.45) !important;
+  transform: scale(1.008) !important;
+  z-index: 5 !important;
+}
+
+.lk-participant-tile video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0.9rem !important;
+}
+
+/* Professional Participant Name & Status Pill */
+.lk-participant-metadata,
+.lk-participant-tile .lk-participant-name {
+  background: rgba(16, 2, 4, 0.78) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   color: #FFFFFF !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
   border-radius: 0.5rem !important;
-  font-weight: 600 !important;
+  padding: 0.25rem 0.65rem !important;
+  position: absolute !important;
+  bottom: 0.65rem !important;
+  left: 0.65rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  z-index: 10 !important;
+  max-width: calc(100% - 1.5rem) !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Camera-Off Professional Placeholder */
+.lk-participant-placeholder {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: radial-gradient(circle at center, #2B050D 0%, #140205 100%) !important;
 }
 
 .lk-focus-toggle-button {
@@ -170,7 +285,11 @@ body {
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
+  max-height: 100% !important;
   width: 100% !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
   gap: 0.5rem !important;
 }
 
@@ -178,14 +297,20 @@ body {
   display: flex !important;
   gap: 0.5rem !important;
   overflow-x: auto !important;
+  overflow-y: hidden !important;
   padding: 0.25rem 0 !important;
   scrollbar-width: thin !important;
+  flex-shrink: 0 !important;
+  height: 110px !important;
+  max-height: 110px !important;
 }
 
 .lk-carousel-layout .lk-participant-tile {
   min-width: 160px !important;
-  max-width: 220px !important;
+  max-width: 200px !important;
   height: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  flex-shrink: 0 !important;
 }
 
 /* ── Fullscreen Video Arena ─────────────────────────────────────────────────── */
@@ -202,7 +327,7 @@ body {
   max-height: 100vh !important;
   border-radius: 0 !important;
   border: none !important;
-  background-color: #1A0307 !important;
+  background-color: #100204 !important;
   display: flex !important;
   flex-direction: column !important;
   z-index: 99999 !important;
@@ -213,6 +338,7 @@ body {
 .meeting-stage[data-fullscreen="true"] .video-stage-content {
   flex: 1 1 0% !important;
   height: 100% !important;
+  max-height: 100% !important;
   min-height: 0 !important;
   padding: 0.75rem !important;
 }
@@ -225,6 +351,7 @@ body {
 .meeting-stage[data-fullscreen="true"] .lk-grid-layout {
   height: 100% !important;
   width: 100% !important;
+  max-height: 100% !important;
 }
 
 .meeting-stage:fullscreen .meeting-stage-topbar,
