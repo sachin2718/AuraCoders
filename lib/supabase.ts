@@ -208,26 +208,29 @@ export function createBrowserClient() {
           return { data: { user: matched }, error: null };
         },
         signInWithPassword: async ({ email }: { email: string }) => {
-          const prefix = (email || "demo").split("@")[0].toLowerCase();
+          const prefix = (email || "user").split("@")[0].toLowerCase();
+          const displayName = prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : "User";
           const matched = DEMO_USERS[prefix] || {
-            id: `user-${prefix || "demo"}`,
-            email: email || "demo@meetmate.ai",
+            id: `user-${prefix || "user"}`,
+            email: email || "user@meetmate.ai",
             user_metadata: {
-              display_name: (email || "demo").split("@")[0] || "Demo User",
-              full_name: (email || "demo").split("@")[0] || "Demo User",
+              display_name: displayName,
+              full_name: displayName,
             },
           };
           saveUser(matched);
           return { data: { user: matched }, error: null };
         },
-        signUp: async ({ email }: { email: string }) => {
-          const prefix = (email || "demo").split("@")[0].toLowerCase();
+        signUp: async ({ email, options }: { email: string; options?: { data?: { full_name?: string; display_name?: string } } }) => {
+          const prefix = (email || "user").split("@")[0].toLowerCase();
+          const customName = options?.data?.full_name || options?.data?.display_name;
+          const displayName = customName || (prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : "User");
           const matched = {
-            id: `user-${prefix || "demo"}`,
-            email: email || "demo@meetmate.ai",
+            id: `user-${prefix || "user"}`,
+            email: email || "user@meetmate.ai",
             user_metadata: {
-              display_name: (email || "demo").split("@")[0] || "Demo User",
-              full_name: (email || "demo").split("@")[0] || "Demo User",
+              display_name: displayName,
+              full_name: displayName,
             },
           };
           saveUser(matched);
