@@ -1,14 +1,19 @@
 "use client";
 
 import {
+  CarouselLayout,
   ControlBar,
+  FocusLayout,
+  FocusLayoutContainer,
   GridLayout,
   LayoutContextProvider,
   LiveKitRoom,
   ParticipantTile,
   RoomAudioRenderer,
   useLocalParticipant,
+  useMaybeLayoutContext,
   useParticipants,
+  usePinnedTracks,
   useRoomContext,
   useTracks,
 } from "@livekit/components-react";
@@ -21,8 +26,10 @@ import {
   Copy,
   Crown,
   LogOut,
+  Maximize,
   Mic,
   MicOff,
+  Minimize,
   MonitorUp,
   MoreHorizontal,
   PhoneOff,
@@ -394,6 +401,8 @@ function InCall({
   onMeetingEnded: () => void;
   onLeave: () => void;
 }) {
+  const stageContainerRef = useRef<HTMLElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const localStreamRef = useRef<MediaStream | null>(sharedStream || null);
   const [localCamOn, setLocalCamOn] = useState(true);
   const [localMicOn, setLocalMicOn] = useState(true);
@@ -407,6 +416,95 @@ function InCall({
   const room = useRoomContext();
   const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
   const liveKitParticipants = useParticipants();
+
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      const doc = document as any;
+      const isNativeFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+
+      if (isFullscreen || isNativeFs) {
+        if (isNativeFs) {
+          if (doc.exitFullscreen) await doc.exitFullscreen();
+          else if (doc.webkitExitFullscreen) await doc.webkitExitFullscreen();
+          else if (doc.mozCancelFullScreen) await doc.mozCancelFullScreen();
+          else if (doc.msExitFullscreen) await doc.msExitFullscreen();
+        }
+        setIsFullscreen(false);
+      } else {
+        const el = stageContainerRef.current || document.documentElement;
+        try {
+          if (el.requestFullscreen) {
+            await el.requestFullscreen();
+          } else if ((el as any).webkitRequestFullscreen) {
+            await (el as any).webkitRequestFullscreen();
+          } else if ((el as any).mozRequestFullScreen) {
+            await (el as any).mozRequestFullScreen();
+          } else if ((el as any).msRequestFullscreen) {
+            await (el as any).msRequestFullscreen();
+          }
+        } catch (err) {
+          console.warn("Native fullscreen request prevented, using full-window mode:", err);
+        }
+        setIsFullscreen(true);
+      }
+    } catch (err) {
+      console.warn("Fullscreen toggle error:", err);
+      setIsFullscreen((prev) => !prev);
+    }
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      const doc = document as any;
+      const isNativeFs = Boolean(
+        doc.fullscreenElement ||
+        doc.webkitFullscreenElement ||
+        doc.mozFullScreenElement ||
+        doc.msFullscreenElement
+      );
+      if (!isNativeFs) {
+        setIsFullscreen(false);
+      } else {
+        setIsFullscreen(true);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("webkitfullscreenchange", onFsChange);
+    document.addEventListener("mozfullscreenchange", onFsChange);
+    document.addEventListener("MSFullscreenChange", onFsChange);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "f" || e.key === "F") {
+        const target = e.target as HTMLElement | null;
+        const isInput =
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable);
+        if (!isInput && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          e.preventDefault();
+          void toggleFullscreen();
+        }
+      } else if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      document.removeEventListener("webkitfullscreenchange", onFsChange);
+      document.removeEventListener("mozfullscreenchange", onFsChange);
+      document.removeEventListener("MSFullscreenChange", onFsChange);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isFullscreen, toggleFullscreen]);
 
   const displayParticipants = useMemo(() => {
     const list: Array<{
@@ -477,6 +575,29 @@ function InCall({
   const screenShareTracks = useTracks([
     { source: Track.Source.ScreenShare, withPlaceholder: false },
   ]);
+
+  const layoutContext = useMaybeLayoutContext();
+  const pinnedTracks = usePinnedTracks(layoutContext);
+  const focusTrack = pinnedTracks?.[0];
+
+  const carouselTracks = useMemo(() => {
+    if (!focusTrack) return tracks;
+    return tracks.filter(
+      (t) =>
+        !(
+          t.participant.identity === focusTrack.participant.identity &&
+          t.source === focusTrack.source
+        )
+    );
+  }, [tracks, focusTrack]);
+
+  // Auto-focus screen share when active if not manually pinned
+  useEffect(() => {
+    const screenShareTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
+    if (screenShareTrack && !focusTrack && layoutContext?.pin?.dispatch) {
+      layoutContext.pin.dispatch({ msg: "set_pin", trackReference: screenShareTrack });
+    }
+  }, [tracks, focusTrack, layoutContext]);
 
   // Track the local participant's active screen share track
   const localScreenShareTrack = useMemo(() => {
@@ -734,9 +855,17 @@ function InCall({
   return (
     <div className="flex flex-1 flex-col bg-white text-[#2B050D]">
       <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
-          {/* Top of video stage: Participants and Invite button */}
-          <div className="flex items-center justify-between gap-3 border-b-2 border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2.5">
+        <section
+          ref={stageContainerRef}
+          data-fullscreen={isFullscreen}
+          className={`meeting-stage flex min-h-0 min-w-0 flex-col overflow-hidden bg-white shadow-md transition-all ${
+            isFullscreen
+              ? "fixed inset-0 z-50 h-screen w-screen rounded-none border-0"
+              : "rounded-2xl border-2 border-[#F0B8C4]"
+          }`}
+        >
+          {/* Top of video stage: Participants, Invite, and Fullscreen toggle */}
+          <div className="meeting-stage-topbar flex items-center justify-between gap-3 border-b-2 border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2.5">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
@@ -760,17 +889,57 @@ function InCall({
                 <span>{copiedLink ? "Link copied" : "Invite"}</span>
               </button>
             </div>
-            <p className="hidden text-xs text-[#800020] font-semibold md:block">Real-time Room • {code}</p>
+            <div className="flex items-center gap-3">
+              <p className="hidden text-xs text-[#800020] font-semibold md:block">Real-time Room • {code}</p>
+              <button
+                type="button"
+                onClick={() => void toggleFullscreen()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#F0B8C4] bg-white px-2.5 py-1 text-[11px] font-bold text-[#800020] hover:bg-[#FFF0F3] transition shadow-sm cursor-pointer"
+                title={isFullscreen ? "Exit Fullscreen (Esc or F)" : "Full Screen (F)"}
+                aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize className="h-3.5 w-3.5 text-[#800020]" />
+                    <span>Exit Fullscreen</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize className="h-3.5 w-3.5 text-[#800020]" />
+                    <span>Full Screen</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Video Stage */}
-          <div className="min-h-[360px] flex-1 p-3 bg-[#1A0307]">
+          <div
+            onDoubleClick={(e) => {
+              if ((e.target as HTMLElement).closest("button")) return;
+              void toggleFullscreen();
+            }}
+            className="video-stage-content min-h-[360px] flex-1 p-3 bg-[#1A0307]"
+          >
             {!isMockLiveKit ? (
               <div className="relative h-full w-full min-h-[360px]">
                 {tracks.length > 0 ? (
-                  <GridLayout tracks={tracks} className="h-full min-h-[360px] w-full">
-                    <ParticipantTile />
-                  </GridLayout>
+                  focusTrack ? (
+                    <FocusLayoutContainer className="flex h-full min-h-[360px] w-full flex-col gap-3">
+                      {carouselTracks.length > 0 && (
+                        <CarouselLayout tracks={carouselTracks} className="h-28 w-full shrink-0">
+                          <ParticipantTile />
+                        </CarouselLayout>
+                      )}
+                      <FocusLayout trackRef={focusTrack} className="flex-1 min-h-0 w-full">
+                        <ParticipantTile />
+                      </FocusLayout>
+                    </FocusLayoutContainer>
+                  ) : (
+                    <GridLayout tracks={tracks} className="h-full min-h-[360px] w-full">
+                      <ParticipantTile />
+                    </GridLayout>
+                  )
                 ) : (
                   <div className="grid h-full min-h-[360px] w-full place-items-center rounded-2xl bg-[#2B050D] p-6 text-center border-2 border-[#800020]/30">
                     <div className="space-y-2">
@@ -803,8 +972,8 @@ function InCall({
             </div>
           </div>
 
-          {/* Control Bar: exactly ONE screen share button */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 border-t-2 border-[#F0B8C4] bg-white px-3 py-3 shadow-sm">
+          {/* Control Bar: exactly ONE screen share button + Fullscreen toggle */}
+          <div className="meeting-stage-controls flex flex-wrap items-center justify-center gap-2.5 border-t-2 border-[#F0B8C4] bg-white px-3 py-3 shadow-sm">
             {isMockLiveKit ? (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button type="button" onClick={() => setLocalMicOn((m) => !m)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${localMicOn ? "border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3]" : "bg-[#800020] text-white"}`}>
@@ -849,6 +1018,20 @@ function InCall({
             >
               <Captions className="h-4 w-4" />
               {captionsEnabled ? "Captions on" : "Captions off"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                isFullscreen
+                  ? "bg-[#800020] text-white shadow-md"
+                  : "border-2 border-[#F0B8C4] bg-white text-[#800020] hover:bg-[#FFF0F3]"
+              }`}
+              title={isFullscreen ? "Exit Fullscreen (Esc or F)" : "Full Screen (F)"}
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Full Screen"}
+            >
+              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              <span className="hidden xs:inline">{isFullscreen ? "Exit Fullscreen" : "Full Screen"}</span>
             </button>
             {isHost ? (
               <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#800020] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#600018] shadow-md shadow-[#800020]/20 disabled:opacity-50 cursor-pointer"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End Meeting"}</span></button>
@@ -1134,14 +1317,21 @@ export default function Room({
     setJoining(false);
   };
 
-  if (loading) return <main className="grid min-h-screen place-items-center bg-[#0b1020] text-white">Preparing meeting {code}…</main>;
+  if (loading) return (
+    <main className="grid min-h-screen place-items-center bg-[#FFF5F7] text-[#800020]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-9 w-9 animate-spin rounded-full border-3 border-[#800020] border-t-transparent" />
+        <p className="text-sm font-bold text-[#800020]">Preparing meeting {code}…</p>
+      </div>
+    </main>
+  );
   if (error || !credentials) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#0b1020] p-6 text-white">
-        <section role="alert" className="max-w-lg rounded-2xl border border-red-400/30 bg-slate-900 p-6">
-          <h1 className="text-xl font-semibold">Could not join the meeting</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-300">{error ?? "Meeting credentials are unavailable."}</p>
-          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-lg bg-indigo-500 px-4 py-2 font-medium">Try again</button>
+      <main className="grid min-h-screen place-items-center bg-[#FFF5F7] p-6 text-[#2B050D]">
+        <section role="alert" className="max-w-lg rounded-3xl border-2 border-[#800020] bg-white p-7 shadow-xl">
+          <h1 className="text-xl font-bold text-[#800020]">Could not join the meeting</h1>
+          <p className="mt-3 text-sm leading-6 text-[#520919]">{error ?? "Meeting credentials are unavailable."}</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-[#800020] px-5 py-2.5 font-bold text-white shadow-md hover:bg-[#600018] transition cursor-pointer">Try again</button>
         </section>
       </main>
     );

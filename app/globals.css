@@ -148,3 +148,96 @@ body {
   border-radius: 0.5rem !important;
   font-weight: 600 !important;
 }
+
+.lk-focus-toggle-button {
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #800020 !important;
+  border: 1.5px solid #F0B8C4 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+.lk-focus-toggle-button:hover {
+  background: #800020 !important;
+  color: #FFFFFF !important;
+  border-color: #800020 !important;
+  transform: scale(1.08) !important;
+}
+
+/* ── LiveKit Focus & Carousel Layout ────────────────────────────────────────── */
+.lk-focus-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  width: 100% !important;
+  gap: 0.5rem !important;
+}
+
+.lk-carousel-layout {
+  display: flex !important;
+  gap: 0.5rem !important;
+  overflow-x: auto !important;
+  padding: 0.25rem 0 !important;
+  scrollbar-width: thin !important;
+}
+
+.lk-carousel-layout .lk-participant-tile {
+  min-width: 160px !important;
+  max-width: 220px !important;
+  height: 100% !important;
+}
+
+/* ── Fullscreen Video Arena ─────────────────────────────────────────────────── */
+.meeting-stage:fullscreen,
+.meeting-stage:-webkit-full-screen,
+.meeting-stage:-moz-full-screen,
+.meeting-stage:-ms-fullscreen,
+.meeting-stage[data-fullscreen="true"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background-color: #1A0307 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 99999 !important;
+}
+
+.meeting-stage:fullscreen .video-stage-content,
+.meeting-stage:-webkit-full-screen .video-stage-content,
+.meeting-stage[data-fullscreen="true"] .video-stage-content {
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0.75rem !important;
+}
+
+.meeting-stage:fullscreen .lk-focus-layout,
+.meeting-stage:-webkit-full-screen .lk-focus-layout,
+.meeting-stage[data-fullscreen="true"] .lk-focus-layout,
+.meeting-stage:fullscreen .lk-grid-layout,
+.meeting-stage:-webkit-full-screen .lk-grid-layout,
+.meeting-stage[data-fullscreen="true"] .lk-grid-layout {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.meeting-stage:fullscreen .meeting-stage-topbar,
+.meeting-stage:-webkit-full-screen .meeting-stage-topbar,
+.meeting-stage[data-fullscreen="true"] .meeting-stage-topbar {
+  background: rgba(255, 245, 247, 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+.meeting-stage:fullscreen .meeting-stage-controls,
+.meeting-stage:-webkit-full-screen .meeting-stage-controls,
+.meeting-stage[data-fullscreen="true"] .meeting-stage-controls {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: 0 -4px 20px rgba(128, 0, 32, 0.15) !important;
+}
