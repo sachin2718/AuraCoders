@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { RoomEvent } from "livekit-client";
 import { useRoomContext } from "@livekit/components-react";
-import { ChevronDown, AlertTriangle, ArrowDown, Copy, Check, FileText } from "lucide-react";
+import { ChevronDown, AlertTriangle, ArrowDown, Copy, Check, FileText, Globe } from "lucide-react";
+import { SUPPORTED_LANGUAGES } from "../lib/speech";
 
 export type TranscriptLine = {
   speakerName: string;
@@ -16,6 +17,8 @@ export interface TranscriptPanelProps {
   speechError?: string | null;
   localLines?: TranscriptLine[];
   className?: string;
+  language?: string;
+  onLanguageChange?: (lang: string) => void;
 }
 
 /**
@@ -47,6 +50,8 @@ export default function TranscriptPanel({
   speechError,
   localLines = [],
   className = "",
+  language = "en-IN",
+  onLanguageChange,
 }: TranscriptPanelProps) {
   const room = useRoomContext();
   const [receivedLines, setReceivedLines] = useState<TranscriptLine[]>([]);
@@ -220,6 +225,22 @@ export default function TranscriptPanel({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {onLanguageChange && (
+            <select
+              value={language}
+              onChange={(e) => onLanguageChange(e.target.value)}
+              aria-label="Speech language"
+              className="rounded-lg border border-[#F0B8C4] bg-white px-2 py-1 text-[11px] font-bold text-[#800020] hover:border-[#800020] transition shadow-xs cursor-pointer focus:outline-none"
+              title="Speech recognition accent/language"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  🌐 {l.label}
+                </option>
+              ))}
+            </select>
+          )}
+
           {lines.length > 0 && !collapsed && (
             <button
               type="button"

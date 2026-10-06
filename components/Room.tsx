@@ -51,7 +51,7 @@ import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
 import MeetMateAssistant from "./MeetMateAssistant";
 import Navbar from "./Navbar";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
-import { useSpeech } from "../lib/speech";
+import { useSpeech, SUPPORTED_LANGUAGES, getDefaultSpeechLanguage } from "../lib/speech";
 import { useVisualShare } from "../lib/visual";
 import { api } from "../lib/api";
 
@@ -410,6 +410,28 @@ function InCall({
   const [screenShareEnabled, setScreenShareEnabled] = useState(false);
   const [showParticipantsModal, setShowParticipantsModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [speechLang, setSpeechLang] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("meetmate_speech_lang") || getDefaultSpeechLanguage();
+    }
+    return "en-IN";
+  });
+
+  const handleLanguageChange = (newLang: string) => {
+    setSpeechLang(newLang);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("meetmate_speech_lang", newLang);
+      } catch {}
+    }
+    onNotice({
+      kind: "info",
+      message: `Speech recognition language set to ${
+        SUPPORTED_LANGUAGES.find((l) => l.code === newLang)?.label || newLang
+      }.`,
+    });
+  };
+
   // Host verification: Only the host (meeting.host_id === current user) is considered host
   const isHost = Boolean(meetingId && hostId && userId && hostId.trim() === userId.trim());
 
@@ -758,6 +780,7 @@ function InCall({
   const { supported, error: speechError } = useSpeech({
     enabled: speechEnabled,
     startedAt,
+    lang: speechLang,
     onFinal: ({ text, tMs }) => postTranscript(text, tMs),
   });
 
@@ -1019,6 +1042,21 @@ function InCall({
               <Captions className="h-4 w-4" />
               {captionsEnabled ? "Captions on" : "Captions off"}
             </button>
+            <div className="relative inline-flex items-center">
+              <select
+                aria-label="Speech language"
+                value={speechLang}
+                onChange={(e) => handleLanguageChange(e.target.value)}
+                className="h-10 rounded-xl border-2 border-[#F0B8C4] bg-white px-2.5 py-1 text-xs font-bold text-[#800020] hover:border-[#800020] transition shadow-xs cursor-pointer focus:outline-none"
+                title="Select Speech Recognition Accent/Language"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code} className="text-[#2B050D] font-medium">
+                    🌐 {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button
               type="button"
               onClick={() => void toggleFullscreen()}
@@ -1044,7 +1082,13 @@ function InCall({
         {/* Aside Panels (Transcript & Chat) */}
         <aside className="grid min-h-[520px] min-w-0 gap-3 lg:min-h-0 lg:grid-rows-2">
           <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
-            <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
+            <TranscriptPanel
+              supported={supported}
+              speechError={speechError}
+              localLines={localTranscriptLines}
+              language={speechLang}
+              onLanguageChange={handleLanguageChange}
+            />
           </div>
           <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
             <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
@@ -1053,7 +1097,16 @@ function InCall({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2 text-[11px] text-[#520919] sm:px-6">
-        <span className="flex items-center gap-1.5 font-medium">{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone in real time." : "Turn on microphone to transcribe your speech.")}</span>
+        <span className="flex items-center gap-1.5 font-medium">
+          {supported === false
+            ? "Live transcription needs Chrome or Edge."
+            : speechError ||
+              (isMicrophoneEnabled
+                ? `Transcribing your microphone in real time (${
+                    SUPPORTED_LANGUAGES.find((l) => l.code === speechLang)?.label || speechLang
+                  }).`
+                : "Turn on microphone to transcribe your speech.")}
+        </span>
         <span className="flex items-center gap-3">{savingTranscript && <span role="status" className="font-bold text-[#800020]">Saving transcript…</span>}{endError && <span role="alert" className="text-white bg-[#800020] px-2 py-0.5 rounded font-bold">{endError}</span>}<span className="hidden items-center gap-1 font-semibold text-[#800020] sm:flex"><Sparkles className="h-3 w-3 text-[#800020]" /> MeetMate AI Copilot</span></span>
       </div>
       <RoomAudioRenderer />
