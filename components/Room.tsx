@@ -42,6 +42,7 @@ import ChatPanel from "./ChatPanel";
 import Lobby from "./Lobby";
 import TranscriptPanel, { type TranscriptLine } from "./TranscriptPanel";
 import MeetMateAssistant from "./MeetMateAssistant";
+import Navbar from "./Navbar";
 import { getLiveKitCredentials, getMeetingUser, type LiveKitCredentials } from "../lib/livekit";
 import { useSpeech } from "../lib/speech";
 import { useVisualShare } from "../lib/visual";
@@ -211,7 +212,7 @@ function LocalCameraStage({
   );
 
   return (
-    <div className="relative flex h-full min-h-[200px] w-full items-center justify-center overflow-hidden rounded-xl bg-slate-950">
+    <div className="relative flex h-full min-h-[200px] w-full items-center justify-center overflow-hidden rounded-xl bg-[#1A0307]">
       {/* Video element is kept in the DOM to avoid re-initializing video decoding */}
       <video
         ref={handleVideoRef}
@@ -225,17 +226,17 @@ function LocalCameraStage({
 
       {/* Fallback View when camera is turned off or loading */}
       {(!cameraOn || !stream) && (
-        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-slate-300">
-          <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full border-2 border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 text-2xl sm:text-3xl font-bold text-slate-100 shadow-xl">
+        <div className="flex flex-col items-center justify-center gap-3 p-6 text-center text-[#FFF0F3]">
+          <div className="relative flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-full border-2 border-[#F0B8C4] bg-gradient-to-br from-[#800020] to-[#520919] text-2xl sm:text-3xl font-extrabold text-white shadow-xl shadow-[#800020]/30">
             {displayName.slice(0, 2).toUpperCase()}
             {cameraOn && !stream && (
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-xs">
+              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#800020] text-xs">
                 📷
               </span>
             )}
           </div>
-          <span className="text-sm font-semibold">{displayName}</span>
-          <span className="text-xs text-slate-400">
+          <span className="text-sm font-bold text-white">{displayName}</span>
+          <span className="text-xs text-[#F0B8C4]">
             {!cameraOn
               ? "Camera is turned off"
               : error
@@ -731,60 +732,38 @@ function InCall({
   };
 
   return (
-    <div className="flex min-h-[calc(100dvh-73px)] flex-col bg-[#111827] text-slate-100">
-      <div className="flex min-h-14 items-center justify-between gap-3 border-b border-slate-700/80 bg-[#1f2937] px-4 py-2.5 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#6264a7] text-white shadow-lg shadow-indigo-950/30">
-            <Video className="h-4 w-4" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{code}</p>
-            <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><ShieldCheck className="h-3 w-3 text-emerald-400" /> MeetMate meeting</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowParticipantsModal((prev) => !prev)}
-            className="flex items-center gap-2 rounded-xl border border-slate-700/80 bg-slate-800/90 px-3 py-1.5 text-xs font-medium text-slate-200 shadow-sm transition hover:border-indigo-500/50 hover:bg-slate-700"
-            title="Click to view all participants"
-          >
-            <UsersRound className="h-3.5 w-3.5 text-indigo-400" />
-            <span>{totalParticipantCount} {totalParticipantCount === 1 ? "participant" : "participants"}</span>
-          </button>
-          <span className="hidden items-center gap-1.5 rounded-full bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-200 sm:flex"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> Assistant active</span>
-          <button type="button" aria-label="More meeting options" className="hidden rounded-lg p-2 text-slate-400 transition hover:bg-slate-700 hover:text-white sm:block"><MoreHorizontal className="h-4 w-4" /></button>
-        </div>
-      </div>
-
+    <div className="flex flex-1 flex-col bg-white text-[#2B050D]">
       <div className="grid min-h-0 flex-1 gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-[#800020]/30 bg-[#1A0307] shadow-2xl">
-          <div className="flex items-center justify-between gap-3 border-b-2 border-[#800020]/20 bg-[#2B050D] px-4 py-3">
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
+          {/* Top of video stage: Participants and Invite button */}
+          <div className="flex items-center justify-between gap-3 border-b-2 border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2.5">
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowParticipantsModal(true)}
-                className="flex items-center gap-2 text-xs text-white hover:text-white/80 transition group cursor-pointer"
+                className="flex items-center gap-2 text-xs font-bold text-[#800020] hover:text-[#520919] transition cursor-pointer"
                 title="Click to view participant list"
               >
-                <UsersRound className="h-4 w-4 text-white" />
-                <span className="font-bold text-white">Participants</span>
-                <span className="rounded-full bg-[#800020] text-white border border-white/20 px-2 py-0.5 text-[10px] font-bold">
+                <UsersRound className="h-4 w-4 text-[#800020]" />
+                <span>Participants</span>
+                <span className="rounded-full bg-[#800020] text-white px-2 py-0.5 text-[10px] font-bold">
                   {totalParticipantCount}
                 </span>
               </button>
               <button
                 type="button"
                 onClick={copyMeetingLink}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-white/40 bg-white px-2.5 py-1 text-[11px] font-bold text-[#800020] hover:bg-white/90 transition shadow-sm cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#F0B8C4] bg-white px-2.5 py-1 text-[11px] font-bold text-[#800020] hover:bg-[#FFF0F3] transition shadow-sm cursor-pointer"
                 title="Copy meeting link to invite real users"
               >
                 {copiedLink ? <Check className="h-3 w-3 text-[#800020]" /> : <Copy className="h-3 w-3 text-[#800020]" />}
                 <span>{copiedLink ? "Link copied" : "Invite"}</span>
               </button>
             </div>
-            <p className="hidden text-xs text-[#D64765] font-semibold md:block">Real-time Room • {code}</p>
+            <p className="hidden text-xs text-[#800020] font-semibold md:block">Real-time Room • {code}</p>
           </div>
+
+          {/* Video Stage */}
           <div className="min-h-[360px] flex-1 p-3 bg-[#1A0307]">
             {!isMockLiveKit ? (
               <div className="relative h-full w-full min-h-[360px]">
@@ -797,7 +776,7 @@ function InCall({
                     <div className="space-y-2">
                       <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white border-t-transparent" />
                       <p className="text-sm font-bold text-white">Connecting video…</p>
-                      <p className="text-xs text-[#D64765]">Room code: {code}</p>
+                      <p className="text-xs text-[#F0B8C4]">Room code: {code}</p>
                     </div>
                   </div>
                 )}
@@ -814,18 +793,33 @@ function InCall({
               </div>
             )}
           </div>
-          <div aria-label="Meeting participants" className="flex items-center gap-3 border-t-2 border-[#800020]/20 bg-[#2B050D] px-4 py-3">
+
+          {/* Meeting assistant status */}
+          <div aria-label="Meeting assistant status" className="flex items-center gap-3 border-t-2 border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2 text-xs text-[#520919]">
             <AssistantTile />
-            <div className="hidden text-xs text-[#D64765] sm:block"><p className="font-bold text-white">MeetMate Assistant</p><p>AI notes and transcripts generated in real time</p></div>
+            <div className="hidden text-xs text-[#520919] sm:block">
+              <p className="font-bold text-[#800020]">MeetMate Assistant</p>
+              <p className="text-[11px] text-[#520919]/80">AI notes and transcripts generated in real time</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 border-t-2 border-[#800020]/20 bg-[#2B050D] px-3 py-3">
+
+          {/* Control Bar: exactly ONE screen share button */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 border-t-2 border-[#F0B8C4] bg-white px-3 py-3 shadow-sm">
             {isMockLiveKit ? (
               <div className="flex flex-wrap items-center justify-center gap-2">
-                <button type="button" onClick={() => setLocalMicOn((m) => !m)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${localMicOn ? "bg-white text-[#800020] hover:bg-white/90" : "bg-[#9C0E2E] text-white"}`}>
+                <button type="button" onClick={() => setLocalMicOn((m) => !m)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${localMicOn ? "border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3]" : "bg-[#800020] text-white"}`}>
                   {localMicOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}<span className="hidden xs:inline">{localMicOn ? "Mute" : "Unmute"}</span>
                 </button>
-                <button type="button" onClick={() => setLocalCamOn((c) => !c)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${localCamOn ? "bg-white text-[#800020] hover:bg-white/90" : "bg-[#9C0E2E] text-white"}`}>
+                <button type="button" onClick={() => setLocalCamOn((c) => !c)} className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${localCamOn ? "border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3]" : "bg-[#800020] text-white"}`}>
                   {localCamOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}<span className="hidden xs:inline">{localCamOn ? "Camera" : "Start video"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void toggleScreenShare()}
+                  className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${screenShareEnabled ? "bg-[#800020] text-white" : "border-2 border-[#F0B8C4] text-[#800020] hover:bg-[#FFF0F3]"}`}
+                >
+                  <MonitorUp className="h-4 w-4" />
+                  <span className="hidden xs:inline">{screenShareEnabled ? "Stop sharing" : "Share screen"}</span>
                 </button>
               </div>
             ) : (
@@ -837,13 +831,13 @@ function InCall({
               onClick={() => setShowParticipantsModal((prev) => !prev)}
               className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-bold transition cursor-pointer ${
                 showParticipantsModal
-                  ? "bg-white text-[#800020] shadow-md"
-                  : "bg-[#800020] text-white hover:bg-[#600018]"
+                  ? "bg-[#800020] text-white shadow-md"
+                  : "border-2 border-[#800020] bg-white text-[#800020] hover:bg-[#FFF0F3]"
               }`}
             >
               <UsersRound className="h-4 w-4" />
               <span className="hidden xs:inline">People</span>
-              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold text-white">
+              <span className="rounded-full bg-[#800020] px-2 py-0.5 text-xs font-bold text-white">
                 {totalParticipantCount}
               </span>
             </button>
@@ -851,41 +845,33 @@ function InCall({
               type="button"
               aria-pressed={captionsEnabled}
               onClick={() => setCaptionsEnabled((enabled) => !enabled)}
-              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition md:flex cursor-pointer ${captionsEnabled ? "bg-[#800020] text-white" : "border border-white/20 text-white/80 hover:bg-white/10"}`}
+              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition md:flex cursor-pointer ${captionsEnabled ? "bg-[#800020] text-white" : "border-2 border-[#F0B8C4] text-[#800020] hover:bg-[#FFF0F3]"}`}
             >
               <Captions className="h-4 w-4" />
               {captionsEnabled ? "Captions on" : "Captions off"}
             </button>
-            <button
-              type="button"
-              aria-pressed={screenShareEnabled}
-              onClick={() => void toggleScreenShare()}
-              className={`hidden items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition md:flex cursor-pointer ${screenShareEnabled ? "bg-[#800020] text-white" : "border border-white/20 text-white/80 hover:bg-white/10"}`}
-            >
-              <MonitorUp className="h-4 w-4" />
-              {screenShareEnabled ? "Stop sharing" : "Share screen"}
-            </button>
             {isHost ? (
-              <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#9C0E2E] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#7A0822] disabled:opacity-50 cursor-pointer"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End Meeting"}</span></button>
+              <button type="button" disabled={ending} onClick={() => void endMeeting()} className="flex items-center gap-2 rounded-xl bg-[#800020] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#600018] shadow-md shadow-[#800020]/20 disabled:opacity-50 cursor-pointer"><PhoneOff className="h-4 w-4" /><span>{ending ? "Ending…" : "End Meeting"}</span></button>
             ) : (
-              <button type="button" onClick={() => void handleLeave()} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#800020] transition hover:bg-white/90 cursor-pointer"><LogOut className="h-4 w-4" /><span>Leave</span></button>
+              <button type="button" onClick={() => void handleLeave()} className="flex items-center gap-2 rounded-xl bg-[#800020] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#600018] shadow-md shadow-[#800020]/20 cursor-pointer"><LogOut className="h-4 w-4" /><span>Leave</span></button>
             )}
           </div>
         </section>
 
+        {/* Aside Panels (Transcript & Chat) */}
         <aside className="grid min-h-[520px] min-w-0 gap-3 lg:min-h-0 lg:grid-rows-2">
-          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#800020]/25 bg-white shadow-md">
+          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
             <TranscriptPanel supported={supported} speechError={speechError} localLines={localTranscriptLines} />
           </div>
-          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#800020]/25 bg-white shadow-md">
+          <div className="min-h-0 overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md">
             <ChatPanel roomKey={code} senderName={displayName} mockMode={isMockLiveKit} />
           </div>
         </aside>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t-2 border-[#800020]/20 bg-[#2B050D] px-4 py-2 text-[11px] text-white/70 sm:px-6">
-        <span className="flex items-center gap-1.5">{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone in real time." : "Turn on microphone to transcribe your speech.")}</span>
-        <span className="flex items-center gap-3">{savingTranscript && <span role="status">Saving transcript…</span>}{endError && <span role="alert" className="text-white bg-[#9C0E2E] px-2 py-0.5 rounded">{endError}</span>}<span className="hidden items-center gap-1 sm:flex"><Sparkles className="h-3 w-3 text-white" /> AI Meeting Assistant</span></span>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2 text-[11px] text-[#520919] sm:px-6">
+        <span className="flex items-center gap-1.5 font-medium">{supported === false ? "Live transcription needs Chrome or Edge." : speechError || (isMicrophoneEnabled ? "Transcribing your microphone in real time." : "Turn on microphone to transcribe your speech.")}</span>
+        <span className="flex items-center gap-3">{savingTranscript && <span role="status" className="font-bold text-[#800020]">Saving transcript…</span>}{endError && <span role="alert" className="text-white bg-[#800020] px-2 py-0.5 rounded font-bold">{endError}</span>}<span className="hidden items-center gap-1 font-semibold text-[#800020] sm:flex"><Sparkles className="h-3 w-3 text-[#800020]" /> MeetMate AI Copilot</span></span>
       </div>
       <RoomAudioRenderer />
       <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
@@ -1163,7 +1149,8 @@ export default function Room({
 
   if (!joined) {
     return (
-      <>
+      <main className="min-h-screen bg-white text-[#2B050D]">
+        <Navbar />
         <Lobby
           code={code}
           displayName={displayName}
@@ -1184,7 +1171,7 @@ export default function Room({
           participantCount={lobbyParticipantCount}
         />
         <MeetMateAssistant meetingId={meetingId} meetingTitle={code} />
-      </>
+      </main>
     );
   }
 
@@ -1197,16 +1184,34 @@ export default function Room({
   );
 
   return (
-    <main className="min-h-screen bg-[#1A0307] text-white">
-      <header className="flex min-h-[73px] flex-wrap items-center justify-between gap-2 border-b-2 border-[#800020]/30 bg-[#2B050D] px-4 py-3 sm:px-6">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[.18em] text-[#D64765]">MeetMate Live Room</p>
-          <h1 className="text-xl font-extrabold text-white">{code}</h1>
+    <main className="min-h-screen bg-white text-[#2B050D]">
+      <Navbar />
+      {/* Sleek Meeting Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#F0B8C4] bg-[#FFF5F7] px-4 py-2.5 sm:px-6">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#800020] text-white shadow-sm">
+            <Video size={16} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-[#800020]">{code}</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#800020] text-white px-2 py-0.5 text-[10px] font-bold">
+                Live
+              </span>
+            </div>
+            <p className="text-[11px] font-medium text-[#520919]">MeetMate AI Live Arena</p>
+          </div>
         </div>
-        <p className="rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs text-white">
-          Joining as <strong className="text-white font-bold">{displayName}</strong>
-        </p>
-      </header>
+        <div className="flex items-center gap-2.5">
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-[#F0B8C4] bg-white px-3 py-1 text-xs font-semibold text-[#800020]">
+            <span className="h-2 w-2 rounded-full bg-[#800020] animate-pulse" />
+            AI Assistant Active
+          </span>
+          <span className="rounded-full border border-[#F0B8C4] bg-white px-3 py-1 text-xs font-semibold text-[#520919]">
+            In room as <strong className="text-[#800020]">{displayName}</strong>
+          </span>
+        </div>
+      </div>
       {notice && (
         <div
           className={`fixed left-1/2 top-20 z-[100] max-w-[90vw] -translate-x-1/2 rounded-2xl px-5 py-3 text-sm font-bold shadow-2xl border ${

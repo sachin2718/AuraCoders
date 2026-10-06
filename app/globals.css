@@ -91,14 +91,60 @@ body {
   background: #800020;
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-track {
-    background: #1A0307;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #520919;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #800020;
-  }
+/* ── LiveKit Controls Theme: White & Burgundy ──────────────────────────────── */
+.lk-control-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.lk-button {
+  background: #FFFFFF !important;
+  border: 2px solid #F0B8C4 !important;
+  color: #800020 !important;
+  border-radius: 0.75rem !important;
+  font-weight: 700 !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.lk-button:hover {
+  background: #FFF0F3 !important;
+  border-color: #800020 !important;
+  color: #800020 !important;
+}
+
+.lk-button[data-lk-active="true"] {
+  background: #800020 !important;
+  border-color: #800020 !important;
+  color: #FFFFFF !important;
+}
+
+.lk-button[data-lk-source="screen_share"][data-lk-active="true"] {
+  background: #800020 !important;
+  color: #FFFFFF !important;
+}
+
+.lk-avatar-fallback {
+  background: linear-gradient(135deg, #800020, #520919) !important;
+  color: #FFFFFF !important;
+  border: 3px solid #F0B8C4 !important;
+  font-weight: 800 !important;
+}
+
+.lk-participant-tile {
+  border: 2px solid #800020 !important;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+  background: #1A0307 !important;
+}
+
+.lk-participant-metadata {
+  background: rgba(128, 0, 32, 0.9) !important;
+  color: #FFFFFF !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
 }
