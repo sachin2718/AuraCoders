@@ -3,13 +3,16 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { RoomEvent } from "livekit-client";
 import { useRoomContext } from "@livekit/components-react";
-import { ChevronDown, AlertTriangle, ArrowDown, Copy, Check, FileText, Globe } from "lucide-react";
+import { ChevronDown, AlertTriangle, ArrowDown, Copy, Check, FileText, Globe, Sparkles } from "lucide-react";
 import { SUPPORTED_LANGUAGES } from "../lib/speech";
 
 export type TranscriptLine = {
   speakerName: string;
   text: string;
   tMs: number;
+  originalText?: string;
+  detectedLanguage?: string;
+  isTranslated?: boolean;
 };
 
 export interface TranscriptPanelProps {
@@ -109,6 +112,9 @@ export default function TranscriptPanel({
           speakerName,
           text: data.text.trim(),
           tMs,
+          originalText: typeof data.originalText === "string" ? data.originalText : undefined,
+          detectedLanguage: typeof data.detectedLanguage === "string" ? data.detectedLanguage : undefined,
+          isTranslated: Boolean(data.isTranslated),
         };
 
         setReceivedLines((current) => [...current, newLine]);
@@ -138,6 +144,9 @@ export default function TranscriptPanel({
           speakerName: line.speakerName || "Speaker",
           text: line.text.trim(),
           tMs: Number(line.tMs) || 0,
+          originalText: line.originalText,
+          detectedLanguage: line.detectedLanguage,
+          isTranslated: line.isTranslated,
         });
       }
     }
@@ -220,6 +229,10 @@ export default function TranscriptPanel({
             Live Transcript
             <span className="rounded-full bg-[#800020] px-2 py-0.5 text-xs font-bold text-white">
               {lines.length}
+            </span>
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-[#800020] px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+              <Sparkles className="h-2.5 w-2.5" />
+              <span>Auto-Translate EN</span>
             </span>
           </h2>
         </div>
@@ -336,9 +349,24 @@ export default function TranscriptPanel({
                   </time>
                 </div>
 
-                <p className="pl-6 text-[13px] leading-relaxed text-[#2B050D] break-words">
-                  {line.text}
-                </p>
+                <div className="pl-6 space-y-1">
+                  <p className="text-[13px] leading-relaxed text-[#2B050D] break-words">
+                    {line.text}
+                  </p>
+                  {line.isTranslated && line.detectedLanguage && (
+                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold bg-[#800020]/10 text-[#800020] border border-[#F0B8C4]">
+                        <Globe className="h-2.5 w-2.5" />
+                        <span>{line.detectedLanguage} → English</span>
+                      </span>
+                      {line.originalText && line.originalText.trim() !== line.text.trim() && (
+                        <span className="text-[11px] text-[#800020]/60 italic">
+                          (original: &ldquo;{line.originalText}&rdquo;)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </article>
             );
           })

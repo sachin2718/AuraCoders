@@ -416,7 +416,7 @@ function InCall({
     if (typeof window !== "undefined") {
       return localStorage.getItem("meetmate_speech_lang") || getDefaultSpeechLanguage();
     }
-    return "en-IN";
+    return "auto";
   });
 
   const handleLanguageChange = (newLang: string) => {
@@ -790,42 +790,76 @@ function InCall({
     };
   }, [releaseMedia]);
 
-  const postTranscript = useCallback((text: string, tMs: number) => {
-    if (!consented) return;
-    const line = { speakerName: displayName, text, tMs };
-    setLocalTranscriptLines((current) => [...current, line]);
-    void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(line)), {
-      reliable: true,
-      topic: "transcript",
-    }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
+  const postTranscript = useCallback((rawText: string, tMs: number) => {
+    if (!consented || !rawText || !rawText.trim()) return;
+    const trimmed = rawText.trim();
 
-    if (!meetingId) {
-      onNotice({ kind: "info", message: "Transcript is visible to participants but cannot be saved until meeting metadata is supplied." });
-      return;
-    }
+    void (async () => {
+      let finalLine: TranscriptLine = { speakerName: displayName, text: trimmed, tMs };
 
-    setSavingTranscript(true);
-    queueRef.current = queueRef.current.then(async () => {
-      let lastError: unknown;
-      for (let attempt = 0; attempt < 4; attempt += 1) {
-        try {
-          const response = await fetch("/api/transcript", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ meetingId, speakerName: line.speakerName, text, tMs }),
-          });
-          if (!response.ok) throw new Error(`Transcript API returned ${response.status}.`);
-          return;
-        } catch (error) {
-          lastError = error;
-          if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+      try {
+        const res = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: trimmed,
+            speakerName: displayName,
+            tMs,
+            sourceLang: speechLang,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.text === "string" && data.text.trim()) {
+            finalLine = {
+              speakerName: displayName,
+              text: data.text.trim(),
+              originalText: typeof data.originalText === "string" ? data.originalText : trimmed,
+              detectedLanguage: typeof data.detectedLanguage === "string" ? data.detectedLanguage : "English",
+              isTranslated: Boolean(data.isTranslated),
+              tMs,
+            };
+          }
         }
+      } catch {
+        // Retain original trimmed text
       }
-      onNotice({ kind: "error", message: lastError instanceof Error
-        ? `Could not save transcript: ${lastError.message}`
-        : "Could not save transcript after three retries." });
-    }).finally(() => setSavingTranscript(false));
-  }, [consented, displayName, localParticipant, meetingId, onNotice]);
+
+      setLocalTranscriptLines((current) => [...current, finalLine]);
+
+      void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(finalLine)), {
+        reliable: true,
+        topic: "transcript",
+      }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
+
+      if (!meetingId) {
+        onNotice({ kind: "info", message: "Transcript is visible to participants but cannot be saved until meeting metadata is supplied." });
+        return;
+      }
+
+      setSavingTranscript(true);
+      queueRef.current = queueRef.current.then(async () => {
+        let lastError: unknown;
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          try {
+            const response = await fetch("/api/transcript", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ meetingId, speakerName: finalLine.speakerName, text: finalLine.text, tMs }),
+            });
+            if (!response.ok) throw new Error(`Transcript API returned ${response.status}.`);
+            return;
+          } catch (error) {
+            lastError = error;
+            if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+          }
+        }
+        onNotice({ kind: "error", message: lastError instanceof Error
+          ? `Could not save transcript: ${lastError.message}`
+          : "Could not save transcript after three retries." });
+      }).finally(() => setSavingTranscript(false));
+    })();
+  }, [consented, displayName, localParticipant, meetingId, onNotice, speechLang]);
 
   const { supported, error: speechError } = useSpeech({
     enabled: speechEnabled,

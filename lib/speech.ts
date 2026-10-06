@@ -34,26 +34,35 @@ declare global {
 export type SpeechFinal = { text: string; tMs: number };
 
 export const SUPPORTED_LANGUAGES = [
+  { code: "auto", label: "Auto Detect (Translate to EN)", hint: "AI recognizes language & translates to English" },
   { code: "en-IN", label: "English (India)", hint: "Accurate for Indian accents" },
   { code: "en-US", label: "English (US)", hint: "American accent" },
-  { code: "en-GB", label: "English (UK)", hint: "British accent" },
-  { code: "en-AU", label: "English (Australia)", hint: "Australian accent" },
-  { code: "hi-IN", label: "Hindi (हिन्दी)", hint: "हिंदी भाषा" },
-  { code: "ta-IN", label: "Tamil (தமிழ்)", hint: "தமிழ்" },
-  { code: "te-IN", label: "Telugu (తెలుగు)", hint: "తెలుగు" },
-  { code: "kn-IN", label: "Kannada (ಕನ್ನಡ)", hint: "ಕನ್ನಡ" },
+  { code: "hi-IN", label: "Hindi (हिन्दी) → English", hint: "Hindi speech translated to English" },
+  { code: "kn-IN", label: "Kannada (ಕನ್ನಡ) → English", hint: "Kannada speech translated to English" },
+  { code: "ta-IN", label: "Tamil (தமிழ்) → English", hint: "Tamil speech translated to English" },
+  { code: "te-IN", label: "Telugu (తెలుగు) → English", hint: "Telugu speech translated to English" },
+  { code: "es-ES", label: "Spanish (Español) → English", hint: "Spanish speech translated to English" },
+  { code: "fr-FR", label: "French (Français) → English", hint: "French speech translated to English" },
+  { code: "de-DE", label: "German (Deutsch) → English", hint: "German speech translated to English" },
 ] as const;
 
 /**
- * Automatically detects the ideal default speech recognition language.
- * Defaults to 'en-IN' (English - India) for users in India (+05:30) to avoid
- * phoneme misrecognitions like "lakshmi" when saying "bless me".
+ * Returns the browser BCP-47 listening language tag.
+ * Resolves 'auto' dynamically to the user's primary locale.
  */
-export function getDefaultSpeechLanguage(): string {
+export function getBrowserListenLanguage(langCode?: string): string {
+  if (langCode && langCode !== "auto") return langCode;
   if (typeof window === "undefined") return "en-IN";
 
-  const saved = localStorage.getItem("meetmate_speech_lang");
-  if (saved && saved.trim()) return saved.trim();
+  const navLang = navigator.language || (navigator.languages && navigator.languages[0]) || "";
+  if (navLang.toLowerCase().includes("hi")) return "hi-IN";
+  if (navLang.toLowerCase().includes("kn")) return "kn-IN";
+  if (navLang.toLowerCase().includes("ta")) return "ta-IN";
+  if (navLang.toLowerCase().includes("te")) return "te-IN";
+  if (navLang.toLowerCase().includes("es")) return "es-ES";
+  if (navLang.toLowerCase().includes("fr")) return "fr-FR";
+  if (navLang.toLowerCase().includes("de")) return "de-DE";
+  if (navLang.toLowerCase().includes("in")) return "en-IN";
 
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
@@ -62,12 +71,17 @@ export function getDefaultSpeechLanguage(): string {
     }
   } catch {}
 
-  const navLang = navigator.language || (navigator.languages && navigator.languages[0]) || "";
-  if (navLang.toLowerCase().includes("in") || navLang.toLowerCase().includes("hi")) {
-    return "en-IN";
-  }
+  return navLang || "en-IN";
+}
 
-  return "en-IN";
+/**
+ * Default selection is 'auto' to enable automatic AI recognition and translation to English.
+ */
+export function getDefaultSpeechLanguage(): string {
+  if (typeof window === "undefined") return "auto";
+  const saved = localStorage.getItem("meetmate_speech_lang");
+  if (saved && saved.trim()) return saved.trim();
+  return "auto";
 }
 
 /**
@@ -166,7 +180,7 @@ export function useSpeech({ enabled, startedAt, lang, onFinal }: UseSpeechOption
         recognition.continuous = true;
         recognition.interimResults = false;
         recognition.maxAlternatives = 5;
-        recognition.lang = effectiveLang;
+        recognition.lang = getBrowserListenLanguage(effectiveLang);
         recognition.onresult = (event) => {
           for (let index = event.resultIndex; index < event.results.length; index += 1) {
             const result = event.results[index];
