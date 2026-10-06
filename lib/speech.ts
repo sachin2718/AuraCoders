@@ -149,19 +149,54 @@ export function selectBestAlternative(result: SpeechResultLike, lang: string): s
   return applyPhoneticCorrections(alternatives[0], lang);
 }
 
+/**
+ * Formats fragmented speech utterances into clean, well-formed sentences
+ * with proper capitalization, acoustic corrections, and natural punctuation.
+ */
+export function formatSentence(rawText: string, lang = "en"): string {
+  if (!rawText) return "";
+  let text = applyPhoneticCorrections(rawText.trim(), lang);
+  if (!text) return "";
+
+  // Common corporate & technical speech collisions
+  text = text
+    .replace(/\bpeer\s+review\b/gi, "PR review")
+    .replace(/\bpull\s+request\b/gi, "pull request")
+    .replace(/\bfront\s+and\b/gi, "frontend")
+    .replace(/\bback\s+and\b/gi, "backend")
+    .replace(/\ba\s+gender\b/gi, "agenda")
+    .replace(/\blive\s+kit\b/gi, "LiveKit")
+    .replace(/\bsuper\s+base\b/gi, "Supabase")
+    .replace(/\bi\s+would\s+like\s+to\b/gi, "I would like to");
+
+  // Ensure first character is capitalized
+  text = text.charAt(0).toUpperCase() + text.slice(1);
+
+  // If text does not end with terminal punctuation, add it appropriately
+  if (!/[.?!]$/.test(text)) {
+    const isQuestion = /^(?:who|what|where|when|why|how|can|could|would|should|is|are|do|does|did|will|won't|can't)\b/i.test(text);
+    text += isQuestion ? "?" : ".";
+  }
+
+  return text;
+}
+
 type UseSpeechOptions = {
   enabled: boolean;
   startedAt: number;
   lang?: string;
+  onInterim?: (text: string) => void;
   onFinal: (result: SpeechFinal) => void;
 };
 
-export function useSpeech({ enabled, startedAt, lang, onFinal }: UseSpeechOptions) {
+export function useSpeech({ enabled, startedAt, lang, onInterim, onFinal }: UseSpeechOptions) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const effectiveLang = lang || getDefaultSpeechLanguage();
   const onFinalRef = useRef(onFinal);
   onFinalRef.current = onFinal;
+  const onInterimRef = useRef(onInterim);
+  onInterimRef.current = onInterim;
 
   useEffect(() => {
     const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -171,27 +206,72 @@ export function useSpeech({ enabled, startedAt, lang, onFinal }: UseSpeechOption
     let stopped = false;
     let recognition: SpeechRecognitionLike;
     let restartTimer: number | undefined;
+    let sentenceTimer: number | undefined;
+    let sentenceBuffer: string[] = [];
     let networkErrors = 0;
+
+    const flushSentence = () => {
+      if (sentenceTimer !== undefined) {
+        window.clearTimeout(sentenceTimer);
+        sentenceTimer = undefined;
+      }
+      if (sentenceBuffer.length === 0) return;
+      const joined = sentenceBuffer.join(" ").trim();
+      sentenceBuffer = [];
+      if (!joined) return;
+
+      const formatted = formatSentence(joined, effectiveLang);
+      if (formatted) {
+        setError(null);
+        onFinalRef.current({ text: formatted, tMs: Math.max(0, Date.now() - startedAt) });
+      }
+      onInterimRef.current?.("");
+    };
 
     const start = () => {
       if (stopped) return;
       try {
         recognition = new Recognition();
         recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 5;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 3;
         recognition.lang = getBrowserListenLanguage(effectiveLang);
+
         recognition.onresult = (event) => {
+          let currentInterim = "";
+
           for (let index = event.resultIndex; index < event.results.length; index += 1) {
             const result = event.results[index];
-            if (!result?.isFinal) continue;
-            const text = selectBestAlternative(result, effectiveLang);
-            if (text) {
-              setError(null);
-              onFinalRef.current({ text, tMs: Math.max(0, Date.now() - startedAt) });
+            if (!result) continue;
+
+            if (result.isFinal) {
+              const best = selectBestAlternative(result, effectiveLang);
+              if (best) {
+                sentenceBuffer.push(best);
+              }
+            } else {
+              const interimChunk = result[0]?.transcript?.trim() || "";
+              if (interimChunk) {
+                currentInterim += (currentInterim ? " " : "") + interimChunk;
+              }
             }
           }
+
+          if (currentInterim) {
+            const liveDisplay = [...sentenceBuffer, currentInterim].join(" ");
+            onInterimRef.current?.(liveDisplay);
+          }
+
+          if (sentenceBuffer.length > 0) {
+            const lastChunk = sentenceBuffer[sentenceBuffer.length - 1] || "";
+            const hasTerminalPunctuation = /[.?!]$/.test(lastChunk.trim());
+            const delay = hasTerminalPunctuation ? 300 : 700;
+
+            if (sentenceTimer !== undefined) window.clearTimeout(sentenceTimer);
+            sentenceTimer = window.setTimeout(flushSentence, delay);
+          }
         };
+
         recognition.onerror = (event) => {
           if (event.error === "no-speech" || event.error === "aborted") return;
           if (event.error === "network") networkErrors += 1;
@@ -205,9 +285,12 @@ export function useSpeech({ enabled, startedAt, lang, onFinal }: UseSpeechOption
           };
           setError(messages[event.error] ?? `Speech recognition error: ${event.error}.`);
         };
+
         recognition.onend = () => {
-          if (!stopped) restartTimer = window.setTimeout(start, 300);
+          flushSentence();
+          if (!stopped) restartTimer = window.setTimeout(start, 250);
         };
+
         recognition.start();
       } catch (cause) {
         if (!stopped) setError(cause instanceof Error ? cause.message : "Speech recognition could not start.");
@@ -217,6 +300,7 @@ export function useSpeech({ enabled, startedAt, lang, onFinal }: UseSpeechOption
     start();
     return () => {
       stopped = true;
+      if (sentenceTimer !== undefined) window.clearTimeout(sentenceTimer);
       if (restartTimer !== undefined) window.clearTimeout(restartTimer);
       try {
         recognition?.abort();

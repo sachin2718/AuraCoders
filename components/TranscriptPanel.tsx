@@ -7,6 +7,7 @@ import { ChevronDown, AlertTriangle, ArrowDown, Copy, Check, FileText, Globe, Sp
 import { SUPPORTED_LANGUAGES } from "../lib/speech";
 
 export type TranscriptLine = {
+  id?: string;
   speakerName: string;
   text: string;
   tMs: number;
@@ -22,6 +23,7 @@ export interface TranscriptPanelProps {
   className?: string;
   language?: string;
   onLanguageChange?: (lang: string) => void;
+  interimText?: string;
 }
 
 /**
@@ -55,6 +57,7 @@ export default function TranscriptPanel({
   className = "",
   language = "en-IN",
   onLanguageChange,
+  interimText = "",
 }: TranscriptPanelProps) {
   const room = useRoomContext();
   const [receivedLines, setReceivedLines] = useState<TranscriptLine[]>([]);
@@ -109,6 +112,7 @@ export default function TranscriptPanel({
             : Date.now();
 
         const newLine: TranscriptLine = {
+          id: typeof data.id === "string" ? data.id : undefined,
           speakerName,
           text: data.text.trim(),
           tMs,
@@ -117,7 +121,17 @@ export default function TranscriptPanel({
           isTranslated: Boolean(data.isTranslated),
         };
 
-        setReceivedLines((current) => [...current, newLine]);
+        setReceivedLines((current) => {
+          if (newLine.id) {
+            const idx = current.findIndex((item) => item.id === newLine.id);
+            if (idx >= 0) {
+              const copy = [...current];
+              copy[idx] = newLine;
+              return copy;
+            }
+          }
+          return [...current, newLine];
+        });
       } catch {
         // Silently ignore unrelated or malformed packets
       }
@@ -168,7 +182,7 @@ export default function TranscriptPanel({
     if (!userScrolledUpRef.current) {
       list.scrollTop = list.scrollHeight;
     }
-  }, [lines, collapsed]);
+  }, [lines, interimText, collapsed]);
 
   // Handle scroll events to detect if user has scrolled up
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
@@ -370,6 +384,19 @@ export default function TranscriptPanel({
               </article>
             );
           })
+        )}
+
+        {/* Live Speaking Interim Bubble */}
+        {interimText && (
+          <article className="rounded-xl border border-dashed border-[#800020]/40 bg-[#FFF0F3]/80 p-2.5 transition-all animate-pulse">
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="flex h-2 w-2 rounded-full bg-[#800020] animate-ping" />
+              <span className="text-[11px] font-bold text-[#800020]">Listening in real time…</span>
+            </div>
+            <p className="text-[13px] leading-relaxed text-[#2B050D] italic break-words">
+              {interimText}
+            </p>
+          </article>
         )}
 
         {/* Floating pill */}

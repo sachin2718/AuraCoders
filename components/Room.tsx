@@ -418,6 +418,7 @@ function InCall({
     }
     return "auto";
   });
+  const [interimTranscript, setInterimTranscript] = useState<string>("");
 
   const handleLanguageChange = (newLang: string) => {
     setSpeechLang(newLang);
@@ -793,79 +794,91 @@ function InCall({
   const postTranscript = useCallback((rawText: string, tMs: number) => {
     if (!consented || !rawText || !rawText.trim()) return;
     const trimmed = rawText.trim();
+    const lineId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-    void (async () => {
-      let finalLine: TranscriptLine = { speakerName: displayName, text: trimmed, tMs };
+    // 1. INSTANT LOCAL & ROOM BROADCAST (0ms latency!)
+    const initialLine: TranscriptLine = {
+      id: lineId,
+      speakerName: displayName,
+      text: trimmed,
+      tMs,
+    };
 
-      try {
-        const res = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            text: trimmed,
-            speakerName: displayName,
-            tMs,
-            sourceLang: speechLang,
-          }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && typeof data.text === "string" && data.text.trim()) {
-            finalLine = {
-              speakerName: displayName,
-              text: data.text.trim(),
-              originalText: typeof data.originalText === "string" ? data.originalText : trimmed,
-              detectedLanguage: typeof data.detectedLanguage === "string" ? data.detectedLanguage : "English",
-              isTranslated: Boolean(data.isTranslated),
-              tMs,
-            };
-          }
-        }
-      } catch {
-        // Retain original trimmed text
-      }
+    setLocalTranscriptLines((current) => [...current, initialLine]);
 
-      setLocalTranscriptLines((current) => [...current, finalLine]);
+    void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(initialLine)), {
+      reliable: true,
+      topic: "transcript",
+    }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
 
-      void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(finalLine)), {
-        reliable: true,
-        topic: "transcript",
-      }).catch(() => onNotice({ kind: "error", message: "Transcript could not be shared with the room." }));
-
-      if (!meetingId) {
-        onNotice({ kind: "info", message: "Transcript is visible to participants but cannot be saved until meeting metadata is supplied." });
-        return;
-      }
-
+    // 2. Persist to /api/transcript immediately
+    if (meetingId) {
       setSavingTranscript(true);
       queueRef.current = queueRef.current.then(async () => {
-        let lastError: unknown;
-        for (let attempt = 0; attempt < 4; attempt += 1) {
-          try {
-            const response = await fetch("/api/transcript", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ meetingId, speakerName: finalLine.speakerName, text: finalLine.text, tMs }),
-            });
-            if (!response.ok) throw new Error(`Transcript API returned ${response.status}.`);
-            return;
-          } catch (error) {
-            lastError = error;
-            if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
-          }
-        }
-        onNotice({ kind: "error", message: lastError instanceof Error
-          ? `Could not save transcript: ${lastError.message}`
-          : "Could not save transcript after three retries." });
+        try {
+          await fetch("/api/transcript", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ meetingId, speakerName: displayName, text: trimmed, tMs }),
+          });
+        } catch {}
       }).finally(() => setSavingTranscript(false));
-    })();
+    }
+
+    // 3. BACKGROUND AI TRANSLATION (Non-blocking: only if non-English speech is detected)
+    const hasNonEnglish = !/^[\x00-\x7F\s.,?!'"\-]+$/.test(trimmed) ||
+      /\b(?:kya|kaise|haan|namaste|dhanyavad|kripya|apna|accha|theek|bhai|vanakkam|namaskara|bagunnara|hola|bonjour|merci|danke)\b/i.test(trimmed);
+
+    if (speechLang !== "en-US" && (hasNonEnglish || (speechLang !== "en-IN" && speechLang !== "auto"))) {
+      void (async () => {
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: trimmed,
+              speakerName: displayName,
+              tMs,
+              sourceLang: speechLang,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.text === "string" && data.text.trim() && data.isTranslated) {
+              const updatedLine: TranscriptLine = {
+                id: lineId,
+                speakerName: displayName,
+                text: data.text.trim(),
+                originalText: trimmed,
+                detectedLanguage: data.detectedLanguage || "Non-English",
+                isTranslated: true,
+                tMs,
+              };
+
+              setLocalTranscriptLines((current) =>
+                current.map((item) => (item.id === lineId || (item.tMs === tMs && item.text === trimmed) ? updatedLine : item))
+              );
+
+              void localParticipant.publishData(new TextEncoder().encode(JSON.stringify(updatedLine)), {
+                reliable: true,
+                topic: "transcript",
+              }).catch(() => {});
+            }
+          }
+        } catch {}
+      })();
+    }
   }, [consented, displayName, localParticipant, meetingId, onNotice, speechLang]);
 
   const { supported, error: speechError } = useSpeech({
     enabled: speechEnabled,
     startedAt,
     lang: speechLang,
-    onFinal: ({ text, tMs }) => postTranscript(text, tMs),
+    onInterim: (interim) => setInterimTranscript(interim),
+    onFinal: ({ text, tMs }) => {
+      setInterimTranscript("");
+      postTranscript(text, tMs);
+    },
   });
 
   // Host-only meeting termination handler
@@ -1224,6 +1237,7 @@ function InCall({
               localLines={localTranscriptLines}
               language={speechLang}
               onLanguageChange={handleLanguageChange}
+              interimText={interimTranscript}
             />
           </div>
           <div className="min-h-0 flex flex-col overflow-hidden rounded-2xl border-2 border-[#F0B8C4] bg-white shadow-md h-full max-h-full">
