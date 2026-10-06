@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   ArrowRight,
   KeyRound,
-  Layers,
   Radio,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -233,12 +232,12 @@ function LoginForm() {
 
               <div className="flex items-start gap-3">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white">
-                  <Layers size={16} />
+                  <CheckCircle2 size={16} />
                 </span>
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wide text-white">Collaborative Whiteboard &amp; Code</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-white">AI Summaries &amp; Action Items</h4>
                   <p className="text-xs text-[#F7CBD4]/90 mt-0.5">
-                    Integrated Monaco editor and interactive canvas for engineering reviews.
+                    Instant meeting summaries, key decision records, and automated todo task tracking.
                   </p>
                 </div>
               </div>
