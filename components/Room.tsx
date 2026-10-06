@@ -33,6 +33,8 @@ import {
   MonitorUp,
   MoreHorizontal,
   PhoneOff,
+  Pin,
+  PinOff,
   Plus,
   ShieldCheck,
   Sparkles,
@@ -601,25 +603,73 @@ function InCall({
   const layoutContext = useMaybeLayoutContext();
   const pinnedTracks = usePinnedTracks(layoutContext);
   const focusTrack = pinnedTracks?.[0];
+  const [pinnedParticipantId, setPinnedParticipantId] = useState<string | null>(null);
+
+  // Sync pinnedParticipantId with LiveKit focusTrack
+  useEffect(() => {
+    if (focusTrack) {
+      setPinnedParticipantId(focusTrack.participant.identity);
+    } else if (!focusTrack && pinnedParticipantId) {
+      setPinnedParticipantId(null);
+    }
+  }, [focusTrack]);
+
+  const effectiveFocusTrack = useMemo(() => {
+    if (focusTrack) return focusTrack;
+    if (!pinnedParticipantId) return null;
+    return tracks.find((t) => t.participant.identity === pinnedParticipantId) || null;
+  }, [focusTrack, pinnedParticipantId, tracks]);
 
   const carouselTracks = useMemo(() => {
-    if (!focusTrack) return tracks;
+    if (!effectiveFocusTrack) return tracks;
     return tracks.filter(
       (t) =>
         !(
-          t.participant.identity === focusTrack.participant.identity &&
-          t.source === focusTrack.source
+          t.participant.identity === effectiveFocusTrack.participant.identity &&
+          t.source === effectiveFocusTrack.source
         )
     );
-  }, [tracks, focusTrack]);
+  }, [tracks, effectiveFocusTrack]);
+
+  const pinParticipant = useCallback(
+    (participantId: string) => {
+      if (pinnedParticipantId === participantId) {
+        setPinnedParticipantId(null);
+        if (layoutContext?.pin?.dispatch) {
+          layoutContext.pin.dispatch({ msg: "clear_pin" });
+        }
+        return;
+      }
+
+      setPinnedParticipantId(participantId);
+      const trackRef = tracks.find((t) => t.participant.identity === participantId);
+      if (trackRef && layoutContext?.pin?.dispatch) {
+        layoutContext.pin.dispatch({ msg: "set_pin", trackReference: trackRef });
+      }
+    },
+    [pinnedParticipantId, tracks, layoutContext]
+  );
+
+  const unpinParticipant = useCallback(() => {
+    setPinnedParticipantId(null);
+    if (layoutContext?.pin?.dispatch) {
+      layoutContext.pin.dispatch({ msg: "clear_pin" });
+    }
+  }, [layoutContext]);
+
+  const pinnedParticipantName = useMemo(() => {
+    if (!pinnedParticipantId) return null;
+    const p = displayParticipants.find((item) => item.id === pinnedParticipantId);
+    return p?.name || "Participant";
+  }, [pinnedParticipantId, displayParticipants]);
 
   // Auto-focus screen share when active if not manually pinned
   useEffect(() => {
     const screenShareTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
-    if (screenShareTrack && !focusTrack && layoutContext?.pin?.dispatch) {
+    if (screenShareTrack && !effectiveFocusTrack && !pinnedParticipantId && layoutContext?.pin?.dispatch) {
       layoutContext.pin.dispatch({ msg: "set_pin", trackReference: screenShareTrack });
     }
-  }, [tracks, focusTrack, layoutContext]);
+  }, [tracks, effectiveFocusTrack, pinnedParticipantId, layoutContext]);
 
   // Track the local participant's active screen share track
   const localScreenShareTrack = useMemo(() => {
@@ -913,7 +963,21 @@ function InCall({
               </button>
             </div>
             <div className="flex items-center gap-3">
-              <p className="hidden text-xs text-[#800020] font-semibold md:block">Real-time Room • {code}</p>
+              {effectiveFocusTrack ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-[#800020] bg-white px-2.5 py-1 text-[11px] font-bold text-[#800020] shadow-xs">
+                  <Pin className="h-3 w-3 text-[#800020]" />
+                  <span className="truncate max-w-[130px]">Pinned: {pinnedParticipantName}</span>
+                  <button
+                    type="button"
+                    onClick={unpinParticipant}
+                    className="ml-1 rounded bg-[#800020] px-1.5 py-0.5 text-[9px] font-bold text-white hover:bg-[#600018] cursor-pointer"
+                  >
+                    Unpin
+                  </button>
+                </div>
+              ) : (
+                <p className="hidden text-xs text-[#800020] font-semibold md:block">Real-time Room • {code}</p>
+              )}
               <button
                 type="button"
                 onClick={() => void toggleFullscreen()}
@@ -947,16 +1011,32 @@ function InCall({
             {!isMockLiveKit ? (
               <div className="relative h-full w-full min-h-[360px]">
                 {tracks.length > 0 ? (
-                  focusTrack ? (
+                  effectiveFocusTrack ? (
                     <FocusLayoutContainer className="flex h-full min-h-[360px] w-full flex-col gap-3">
                       {carouselTracks.length > 0 && (
                         <CarouselLayout tracks={carouselTracks} className="h-28 w-full shrink-0">
                           <ParticipantTile />
                         </CarouselLayout>
                       )}
-                      <FocusLayout trackRef={focusTrack} className="flex-1 min-h-0 w-full">
-                        <ParticipantTile />
-                      </FocusLayout>
+                      <div className="relative flex-1 min-h-0 w-full">
+                        <FocusLayout trackRef={effectiveFocusTrack} className="h-full w-full">
+                          <ParticipantTile />
+                        </FocusLayout>
+                        {/* Visible Pin overlay badge */}
+                        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 rounded-full border border-[#F0B8C4] bg-white/95 px-3 py-1 text-xs font-bold text-[#800020] shadow-md backdrop-blur-md">
+                          <Pin className="h-3.5 w-3.5 text-[#800020]" />
+                          <span>Pinned: {pinnedParticipantName}</span>
+                          <button
+                            type="button"
+                            onClick={unpinParticipant}
+                            className="ml-1 flex items-center gap-1 rounded-full bg-[#800020] px-2 py-0.5 text-[10px] font-bold text-white hover:bg-[#600018] transition cursor-pointer"
+                            title="Unpin and return to grid layout"
+                          >
+                            <PinOff className="h-3 w-3" />
+                            <span>Unpin</span>
+                          </button>
+                        </div>
+                      </div>
                     </FocusLayoutContainer>
                   ) : (
                     <GridLayout tracks={tracks} className="h-full min-h-[360px] w-full">
@@ -1031,6 +1111,28 @@ function InCall({
               <span className="hidden xs:inline">People</span>
               <span className="rounded-full bg-[#800020] px-2 py-0.5 text-xs font-bold text-white">
                 {totalParticipantCount}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (effectiveFocusTrack) {
+                  unpinParticipant();
+                } else if (displayParticipants.length > 0) {
+                  const target = displayParticipants.find((p) => !p.isLocal) || displayParticipants[0];
+                  if (target) pinParticipant(target.id);
+                }
+              }}
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition cursor-pointer ${
+                effectiveFocusTrack
+                  ? "bg-[#800020] text-white shadow-md"
+                  : "border-2 border-[#F0B8C4] bg-white text-[#800020] hover:bg-[#FFF0F3]"
+              }`}
+              title={effectiveFocusTrack ? "Unpin participant (Return to grid view)" : "Pin mode (Focus participant)"}
+            >
+              {effectiveFocusTrack ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              <span className="hidden xs:inline">
+                {effectiveFocusTrack ? "Unpin" : "Pin Mode"}
               </span>
             </button>
             <button
@@ -1192,17 +1294,41 @@ function InCall({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 text-slate-400">
-                    {p.micEnabled ? (
-                      <Mic className="h-3.5 w-3.5 text-emerald-400" />
-                    ) : (
-                      <MicOff className="h-3.5 w-3.5 text-red-400" />
-                    )}
-                    {p.cameraEnabled ? (
-                      <Video className="h-3.5 w-3.5 text-emerald-400" />
-                    ) : (
-                      <VideoOff className="h-3.5 w-3.5 text-slate-500" />
-                    )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => pinParticipant(p.id)}
+                      className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold transition shadow-xs cursor-pointer ${
+                        pinnedParticipantId === p.id
+                          ? "bg-[#800020] text-white"
+                          : "border border-[#F0B8C4] bg-white text-[#800020] hover:bg-[#FFF0F3]"
+                      }`}
+                      title={pinnedParticipantId === p.id ? "Unpin participant (Return to grid)" : "Pin participant to stage"}
+                    >
+                      {pinnedParticipantId === p.id ? (
+                        <>
+                          <PinOff className="h-3 w-3" />
+                          <span>Unpin</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="h-3 w-3" />
+                          <span>Pin</span>
+                        </>
+                      )}
+                    </button>
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      {p.micEnabled ? (
+                        <Mic className="h-3.5 w-3.5 text-emerald-400" />
+                      ) : (
+                        <MicOff className="h-3.5 w-3.5 text-red-400" />
+                      )}
+                      {p.cameraEnabled ? (
+                        <Video className="h-3.5 w-3.5 text-emerald-400" />
+                      ) : (
+                        <VideoOff className="h-3.5 w-3.5 text-slate-500" />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
